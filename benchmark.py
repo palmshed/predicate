@@ -123,8 +123,8 @@ def run_single_threaded():
         print(f"\n{'─' * 70}")
         print(f"  {test['name']}")
         print(f"{'─' * 70}")
-        print(f"  Compile  — avg: {c['avg']/1000:8.2f}us | p50: {c['p50']/1000:8.2f}us | p95: {c['p95']/1000:8.2f}us | p99: {c['p99']/1000:8.2f}us")
-        print(f"  SHA-256  — avg: {h['avg']/1000:8.2f}us | p50: {h['p50']/1000:8.2f}us | p95: {h['p95']/1000:8.2f}us | p99: {h['p99']/1000:8.2f}us")
+        print(f"  Compile  -- avg: {c['avg']/1000:8.2f}us | p50: {c['p50']/1000:8.2f}us | p95: {c['p95']/1000:8.2f}us | p99: {c['p99']/1000:8.2f}us")
+        print(f"  SHA-256  -- avg: {h['avg']/1000:8.2f}us | p50: {h['p50']/1000:8.2f}us | p95: {h['p95']/1000:8.2f}us | p99: {h['p99']/1000:8.2f}us")
 
     c = compute_percentiles(all_compile)
     h = compute_percentiles(all_hash)
@@ -136,8 +136,8 @@ def run_single_threaded():
     print("SINGLE-THREADED AGGREGATE")
     print(f"{'=' * 70}")
     print(f"  Queries: {total:,} | Time: {total_s:.4f}s | Throughput: {total/total_s:,.0f} q/s")
-    print(f"\n  Compile  — avg: {c['avg']/1000:8.2f}us | p50: {c['p50']/1000:8.2f}us | p95: {c['p95']/1000:8.2f}us | p99: {c['p99']/1000:8.2f}us | min: {c['min']/1000:8.2f}us | max: {c['max']/1000:8.2f}us")
-    print(f"  SHA-256  — avg: {h['avg']/1000:8.2f}us | p50: {h['p50']/1000:8.2f}us | p95: {h['p95']/1000:8.2f}us | p99: {h['p99']/1000:8.2f}us")
+    print(f"\n  Compile  -- avg: {c['avg']/1000:8.2f}us | p50: {c['p50']/1000:8.2f}us | p95: {c['p95']/1000:8.2f}us | p99: {c['p99']/1000:8.2f}us | min: {c['min']/1000:8.2f}us | max: {c['max']/1000:8.2f}us")
+    print(f"  SHA-256  -- avg: {h['avg']/1000:8.2f}us | p50: {h['p50']/1000:8.2f}us | p95: {h['p95']/1000:8.2f}us | p99: {h['p99']/1000:8.2f}us")
 
     compile_pct = sum(all_compile) / total_ns * 100
     hash_pct = sum(all_hash) / total_ns * 100
@@ -239,7 +239,7 @@ def _process_init(blueprint_dict, tenant_id, warmup_count, count):
 
 def run_multiprocess():
     print(f"\n{'=' * 70}")
-    print("PHASE 3: MULTI-PROCESS (GIL bypass — true CPU scaling)")
+    print("PHASE 3: MULTI-PROCESS (GIL bypass -- true CPU scaling)")
     print(f"  CPU cores: {CORES} | Queries per process: {PROC_QUERIES:,} | Warmup: {PROC_WARMUP:,}")
     proc_counts = [c for c in [1, 2, 4, min(8, CORES)] if c <= CORES]
     if CORES not in proc_counts:

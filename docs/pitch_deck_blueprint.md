@@ -6,7 +6,7 @@
 
 **Visual Anchor:** A high-contrast graphic showing text transforming cleanly into structured code blocks.
 
-**Core Message:** Allowing non-technical teams to query databases instantly using plain text—without risking security or hallucinations.
+**Core Message:** Allowing non-technical teams to query databases instantly using plain text, without risking security or hallucinations.
 
 ---
 
@@ -84,9 +84,9 @@
 
 | Alternative | Limitation | Predicate Advantage |
 |-------------|------------|---------------------|
-| **Visual Query Builders** | Force non-technical workers to master intricate visual relational map logic and data schema properties. | Natural language input with automatic JOIN resolution—no schema knowledge required. |
+| **Visual Query Builders** | Force non-technical workers to master intricate visual relational map logic and data schema properties. | Natural language input with automatic JOIN resolution, no schema knowledge required. |
 | **Naive AI Generation** | Let unstructured LLMs construct raw SQL, frequently breaking database connections, hallucinating fields, or spiking database CPU costs on repetitive analytical queries. | Restricts AI to metadata filters, enforces safe graph joins via code boundaries, and optimizes high-frequency execution using a secure distributed caching layer. |
-| **Custom In-House** | Requires dedicated backend engineers to build and maintain query logic, whitelists, and security boundaries. | Open-core boilerplate framework—teams update one schema file and deploy immediately. |
+| **Custom In-House** | Requires dedicated backend engineers to build and maintain query logic, whitelists, and security boundaries. | Open-core boilerplate framework, teams update one schema file and deploy immediately. |
 
 ---
 
