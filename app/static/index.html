@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predicate Workspace</title>
+    <script src="https://tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans antialiased">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        function PredicateDashboard() {
+            const [prompt, setPrompt] = React.useState("");
+            const [loading, setLoading] = React.useState(false);
+            const [response, setResponse] = React.useState(null);
+            const [apiKey, setApiKey] = React.useState("pred_live_7f8a9b2c3d4e5f6g7h8i9j0k");
+            const [metrics, setMetrics] = React.useState(null);
+            
+            const [exporting, setExporting] = React.useState(false);
+            const [exportStatus, setExportStatus] = React.useState("");
+            const [exportProgress, setExportProgress] = React.useState(0);
+            const [downloadUrl, setDownloadUrl] = React.useState(null);
+
+            const executeQuery = async (e) => {
+                e.preventDefault();
+                if (!prompt.trim()) return;
+
+                setLoading(true);
+                setResponse(null);
+
+                try {
+                    const res = await fetch("/api/v1/query/compile", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-Predicate-API-Key": apiKey
+                        },
+                        body: JSON.stringify({ prompt })
+                    });
+                    const data = await res.json();
+                    setResponse(data);
+                    fetchMetrics();
+                } catch (err) {
+                    setResponse({ error: "Communication failure with compilation engine." });
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const executeExport = async () => {
+                if (!prompt.trim()) return;
+                
+                setExporting(true);
+                setDownloadUrl(null);
+                setExportStatus("QUEUED");
+                setExportProgress(0);
+
+                try {
+                    const res = await fetch("/api/v1/export/async", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-Predicate-API-Key": apiKey
+                        },
+                        body: JSON.stringify({ prompt })
+                    });
+                    const data = await res.json();
+                    
+                    if (data.task_id) {
+                        pollExportStatus(data.task_id);
+                    } else {
+                        setExportStatus("FAILED");
+                        setExporting(false);
+                    }
+                } catch (err) {
+                    setExportStatus("FAILED");
+                    setExporting(false);
+                }
+            };
+
+            const pollExportStatus = (taskId) => {
+                const interval = setInterval(async () => {
+                    try {
+                        const res = await fetch(`/api/v1/export/status/${taskId}`, {
+                            headers: { "X-Predicate-API-Key": apiKey }
+                        });
+                        const data = await res.json();
+                        
+                        setExportStatus(data.state);
+
+                        if (data.state === "PROCESSING" && data.meta) {
+                            setExportProgress(data.meta.progress || 10);
+                        } else if (data.state === "SUCCESS") {
+                            clearInterval(interval);
+                            
+                            const csvContent = data.result.csv_payload;
+                            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                            const url = URL.createObjectURL(blob);
+                            
+                            setDownloadUrl(url);
+                            setExporting(false);
+                            fetchMetrics();
+                        } else if (data.state === "FAILURE") {
+                            clearInterval(interval);
+                            setExporting(false);
+                        }
+                    } catch (err) {
+                        clearInterval(interval);
+                        setExportStatus("FAILED");
+                        setExporting(false);
+                    }
+                }, 1000);
+            };
+
+            const fetchMetrics = async () => {
+                try {
+                    const res = await fetch("/api/v1/metrics", {
+                        headers: { "X-Predicate-API-Key": apiKey }
+                    });
+                    const data = await res.json();
+                    if (!data.error) setMetrics(data);
+                } catch (err) {
+                    console.error("Failed to retrieve pipeline performance metrics.");
+                }
+            };
+
+            React.useEffect(() => {
+                fetchMetrics();
+            }, []);
+
+            return (
+                <div className="min-h-screen flex flex-col max-w-6xl mx-auto p-6 space-y-6">
+                    <header className="border-b border-gray-800 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h1 className="text-lg font-mono font-bold tracking-wider text-gray-200">PREDICATE // CONSOLE</h1>
+                            <p className="text-xs text-gray-500">Semantic Parsing & Query Isolation Workspace</p>
+                        </div>
+                        <div className="w-full sm:w-auto">
+                            <input 
+                                type="password" 
+                                value={apiKey}
+                                onChange={(e) => setApiKey(e.target.value)}
+                                placeholder="X-Predicate-API-Key"
+                                className="w-full sm:w-64 bg-gray-950 border border-gray-800 rounded px-3 py-1.5 text-xs font-mono text-gray-400 focus:outline-none focus:border-gray-700"
+                            />
+                        </div>
+                    </header>
+
+                    {metrics && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-950 rounded border border-gray-800 font-mono text-xs">
+                            <div>
+                                <span className="text-gray-500 block">RPM Window Count</span>
+                                <span className="text-gray-300 font-bold">{metrics.current_minute_usage?.requests_per_minute} / {metrics.current_minute_usage?.tier_limit_ceiling}</span>
+                            </div>
+                            <div>
+                                <span className="text-gray-500 block">Total Queries Run</span>
+                                <span className="text-gray-300 font-bold">{metrics.historical_aggregates?.total_queries_processed}</span>
+                            </div>
+                            <div>
+                                <span className="text-gray-500 block">Memory Cache Hits</span>
+                                <span className="text-green-500 font-bold">{metrics.historical_aggregates?.cached_responses_served}</span>
+                            </div>
+                            <div>
+                                <span className="text-gray-500 block">Optimization Score</span>
+                                <span className="text-blue-400 font-bold">{metrics.historical_aggregates?.infrastructure_efficiency_score}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                        <div className="flex flex-col bg-gray-950 p-5 rounded border border-gray-800 space-y-4">
+                            <div className="text-xs font-mono uppercase tracking-wider text-gray-500">Natural Language Entry</div>
+                            <form onSubmit={executeQuery} className="flex-1 flex flex-col space-y-4">
+                                <textarea
+                                    value={prompt}
+                                    onChange={(e) => setPrompt(e.target.value)}
+                                    placeholder="Ask a question against your whitelisted data layout... (e.g., 'Show me orders from customers in India')"
+                                    className="w-full flex-1 min-h-[200px] bg-gray-900 border border-gray-800 rounded p-4 text-xs font-mono focus:outline-none focus:border-gray-700 resize-none text-gray-300 placeholder-gray-600"
+                                ></textarea>
+                                
+                                <div className="flex gap-4">
+                                    <button
+                                        type="submit"
+                                        disabled={loading || exporting}
+                                        className="flex-1 bg-gray-200 hover:bg-white text-gray-900 text-xs font-mono font-bold py-2.5 px-4 rounded transition disabled:opacity-40"
+                                    >
+                                        {loading ? "COMPILING..." : "RUN_QUERY_PIPELINE"}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={executeExport}
+                                        disabled={loading || exporting || !prompt.trim()}
+                                        className="bg-gray-900 hover:bg-gray-800 text-gray-300 text-xs font-mono font-bold py-2.5 px-4 rounded border border-gray-800 transition disabled:opacity-40"
+                                    >
+                                        {exporting ? `EXPORTING (${exportProgress}%)` : "EXPORT_CSV"}
+                                    </button>
+                                </div>
+                            </form>
+
+                            {exporting && (
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-xs font-mono text-gray-500">
+                                        <span>Task Worker Pipeline State:</span>
+                                        <span>{exportStatus}</span>
+                                    </div>
+                                    <div className="w-full bg-gray-800 rounded h-2">
+                                        <div 
+                                            className="bg-blue-500 h-2 rounded transition-all duration-300" 
+                                            style={{ width: `${exportProgress}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {downloadUrl && (
+                                <div className="flex items-center justify-between bg-green-950 p-3 rounded border border-green-800">
+                                    <span className="text-xs font-mono text-green-400">CSV Export Generated Successfully.</span>
+                                    <a
+                                        href={downloadUrl}
+                                        download="predicate_export.csv"
+                                        className="text-xs font-mono font-bold text-green-300 hover:text-green-200 underline"
+                                    >
+                                        DOWNLOAD_FILE
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex flex-col bg-gray-950 p-5 rounded border border-gray-800 space-y-4">
+                            <div className="text-xs font-mono uppercase tracking-wider text-gray-500">Pipeline Tracking Output</div>
+                            
+                            {!response && !loading && (
+                                <div className="flex-1 flex items-center justify-center border border-dashed border-gray-800 rounded text-xs font-mono text-gray-600">
+                                    Pipeline idle. Awaiting compilation execution.
+                                </div>
+                            )}
+
+                            {loading && (
+                                <div className="flex-1 flex items-center justify-center text-xs font-mono text-gray-500">
+                                    Invoking semantic structural parsing parameters...
+                                </div>
+                            )}
+
+                            {response && (
+                                <div className="flex-1 space-y-4 font-mono text-[11px] overflow-y-auto max-h-[350px]">
+                                    <div className="flex justify-between items-center bg-gray-900 p-2.5 rounded border border-gray-800">
+                                        <span className="text-gray-500">Execution Mode:</span>
+                                        <span className={response.cache_hit ? "text-green-400 font-bold" : "text-amber-500 font-bold"}>
+                                            {response.cache_hit ? "CACHE_REPLAY_HIT (<2ms)" : "DB_COMPUTATION_MISS"}
+                                        </span>
+                                    </div>
+
+                                    <div>
+                                        <div className="text-gray-500 mb-1">COMPILED_SQL_STRUCTURE</div>
+                                        <pre className="bg-gray-900 p-3 rounded border border-gray-800 text-gray-300 whitespace-pre-wrap overflow-x-auto">{response.compiled_sql || JSON.stringify(response, null, 2)}</pre>
+                                    </div>
+
+                                    {response.parameters && (
+                                        <div>
+                                            <div className="text-gray-500 mb-1">INJECTED_PARAMETERS</div>
+                                            <pre className="bg-gray-900 p-2.5 rounded border border-gray-800 text-gray-400 overflow-x-auto">{JSON.stringify(response.parameters)}</pre>
+                                        </div>
+                                    )}
+
+                                    {response.results && (
+                                        <div>
+                                            <div className="text-gray-500 mb-1">RECORD_ROWS_RETURNED ({response.results.length})</div>
+                                            <pre className="bg-gray-900 p-3 rounded border border-gray-800 text-green-400 overflow-x-auto max-h-[200px] overflow-y-auto">{JSON.stringify(response.results, null, 2)}</pre>
+                                        </div>
+                                    )}
+
+                                    {response.error && (
+                                        <div className="bg-red-950 p-3 rounded border border-red-800 text-red-400">
+                                            {response.error}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<PredicateDashboard />);
+    </script>
+</body>
+</html>

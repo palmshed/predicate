@@ -1,0 +1,60 @@
+version: '3.8'
+services:
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: predicate_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: securepassword123
+      POSTGRES_DB: predicate_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d predicate_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis_cache:
+    image: redis:7-alpine
+    container_name: predicate_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  web_api:
+    build: .
+    container_name: predicate_web_api
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:securepassword123@postgres_db:5432/predicate_db
+      - REDIS_URL=redis://redis_cache:6379/0
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+      redis_cache:
+        condition: service_started
+
+  celery_worker:
+    build: .
+    container_name: predicate_celery_worker
+    command: celery -A app.worker.celery_worker worker --loglevel=info
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://postgres:securepassword123@postgres_db:5432/predicate_db
+      - REDIS_URL=redis://redis_cache:6379/0
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+      redis_cache:
+        condition: service_started
+
+volumes:
+  postgres_data:

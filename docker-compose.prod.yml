@@ -1,0 +1,68 @@
+version: '3.8'
+services:
+  postgres_db_prod:
+    image: postgres:15-alpine
+    container_name: predicate_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: prod_secure_password_abc123
+      POSTGRES_DB: predicate_db_prod
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d predicate_db_prod"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis_cache_prod:
+    image: redis:7-alpine
+    container_name: predicate_redis_prod
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_prod_data:/data
+
+  web_api_prod:
+    build: .
+    container_name: predicate_web_api_prod
+    restart: always
+    env_file:
+      - .env.production
+    depends_on:
+      postgres_db_prod:
+        condition: service_healthy
+      redis_cache_prod:
+        condition: service_started
+
+  celery_worker_prod:
+    build: .
+    container_name: predicate_celery_worker_prod
+    command: celery -A app.worker.celery_worker worker --loglevel=info --concurrency=4
+    restart: always
+    env_file:
+      - .env.production
+    depends_on:
+      postgres_db_prod:
+        condition: service_healthy
+      redis_cache_prod:
+        condition: service_started
+
+  nginx_proxy:
+    image: nginx:1.25-alpine
+    container_name: predicate_nginx_prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/predicate.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - web_api_prod
+
+volumes:
+  postgres_prod_data:
+  redis_prod_data:
