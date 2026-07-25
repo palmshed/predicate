@@ -41,9 +41,12 @@ def test_compile_endpoint_accepts_valid_api_key(monkeypatch, mocker):
     mock_svc.translate_text_to_blueprint.return_value = mock_blueprint
 
     import app.main as main_module
+    main_module.agent_service = None
     main_module.agent_service = mock_svc
 
     mocker.patch("app.database.cache.get_redis_client", return_value=None)
+    mocker.patch("app.database.metrics.get_redis_client", return_value=None)
+    mocker.patch("app.database.audit.get_db_cursor", return_value=mock_svc)
 
     response = client.post("/api/v1/query/compile", json={"prompt": "Show all customers"}, headers=headers)
     assert response.status_code == 200
