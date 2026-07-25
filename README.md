@@ -1,5 +1,9 @@
 # Predicate AI Engine
 
+<p align="center">
+  <img src=".github/website/hero.png" alt="predicate" width="100%" />
+</p>
+
 A backend system that translates natural language questions into database queries via an intermediate schema, preventing raw SQL generation or direct database access by language models.
 
 ## Architecture
