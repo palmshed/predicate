@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trademark ~ predicate</title>
+    <meta name="description" content="Trademark notice for the predicate mark." />
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  </head>
+  <body>
+    <nav>
+      <span class="nav-mark">palmshed</span>
+      <ul class="nav-links" id="nav">
+        <li><a href="./index.html">Home</a></li>
+        <li><a href="./app.html">Architecture</a></li>
+        <li><a href="./support.html">Support</a></li>
+        <li><a href="https://github.com/palmshed/predicate">Source</a></li>
+      </ul>
+      <button class="mobile-menu-toggle" aria-label="Menu" aria-expanded="false">Menu</button>
+    </nav>
+
+    <div class="hero hero-short">
+      <div class="hero-content">
+        <h1>Trademark</h1>
+        <p>The predicate mark is part of the project identity. This page records the symbol and usage guidelines.</p>
+      </div>
+    </div>
+
+    <div class="page">
+      <section>
+        <h2>Mark</h2>
+        <p>The predicate name and logo are trademarks of Palmshed. The mark identifies the natural language to SQL translation middleware built by the Palmshed team.</p>
+      </section>
+
+      <section>
+        <h2>Usage</h2>
+        <p>You may use the predicate name and logo in references, documentation, and community projects provided the use does not imply official endorsement or affiliation beyond what exists. Do not modify the logo or use it in a way that suggests Palmshed is responsible for your product or service.</p>
+      </section>
+
+      <section>
+        <h2>Open source</h2>
+        <p>The predicate codebase is released under the MIT license. The MIT license covers the source code. It does not cover the predicate name or logo, which are trademarked by Palmshed.</p>
+      </section>
+
+      <section>
+        <h2>Contact</h2>
+        <p>For questions about trademark usage, <a href="./contact.html">get in touch</a>.</p>
+      </section>
+      <p class="feedback">Found something unexpected? <a href="https://github.com/palmshed/predicate/issues">Report an issue</a>.</p>
+    </div>
+
+    <footer>
+      <p>&copy; 2026 Palmshed</p>
+      <ul class="footer-links">
+        <li><a href="./contact.html">Contact</a></li>
+        <li><a href="./trademark.html">Trademark</a></li>
+        <li><a href="./privacy.html">Privacy</a></li>
+        <li><a href="./terms.html">Terms</a></li>
+      </ul>
+    </footer>
+
+    <script>
+      (function() {
+        var toggle = document.querySelector('.mobile-menu-toggle');
+        var nav = document.getElementById('nav');
+        if (!toggle || !nav) return;
+        function sync() { toggle.setAttribute('aria-expanded', nav.classList.contains('active')); }
+        toggle.addEventListener('click', function(e) {
+          e.stopPropagation();
+          nav.classList.toggle('active');
+          sync();
+        });
+        document.addEventListener('click', function(e) {
+          if (nav.classList.contains('active') && !nav.contains(e.target) && e.target !== toggle) {
+            nav.classList.remove('active');
+            sync();
+          }
+        });
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape' && nav.classList.contains('active')) {
+            nav.classList.remove('active');
+            sync();
+            toggle.focus();
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

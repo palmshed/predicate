@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Architecture ~ predicate</title>
+    <meta name="description" content="The architecture and design decisions behind predicate." />
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  </head>
+  <body>
+    <nav>
+      <span class="nav-mark">palmshed</span>
+      <ul class="nav-links" id="nav">
+        <li><a href="./index.html">Home</a></li>
+        <li><a href="./app.html" class="active">Architecture</a></li>
+        <li><a href="./support.html">Support</a></li>
+        <li><a href="https://github.com/palmshed/predicate">Source</a></li>
+      </ul>
+      <button class="mobile-menu-toggle" aria-label="Menu" aria-expanded="false">Menu</button>
+    </nav>
+
+    <div class="hero hero-short">
+      <div class="hero-content">
+        <h1>Architecture</h1>
+        <p>How the natural language to SQL pipeline works, and why it is safe by design.</p>
+      </div>
+    </div>
+
+    <div class="page">
+      <section>
+        <h2>Pipeline</h2>
+        <p>Every query follows a strict path that separates the AI layer from the database layer. The AI generates a structured JSON blueprint. The compiler translates that blueprint into parameterized SQL. The AI never sees or generates raw SQL.</p>
+        <pre><code>User Text
+  -> OpenAI Structured Outputs (Pydantic schema)
+  -> JSON Blueprint
+  -> SQL Compiler (parameterized, tenant-isolated)
+  -> PostgreSQL Execution
+  -> Cached Response</code></pre>
+      </section>
+
+      <section>
+        <h2>Multi-tenant isolation</h2>
+        <p>Every query is automatically scoped to the requesting tenant. The <code>tenant_id</code> is injected server-side from the validated API key. The AI cannot override, forge, or bypass this filter. JOINs across tables are automatically resolved with tenant scoping on every joined table.</p>
+      </section>
+
+      <section>
+        <h2>Security model</h2>
+        <ul>
+          <li><strong>Parameterized SQL only</strong>, all values use <code>%s</code> placeholders. No string interpolation.</li>
+          <li><strong>Schema whitelist</strong>, <code>ALLOWED_SCHEMA</code> defines which tables and columns can be queried. Anything outside the whitelist is rejected.</li>
+          <li><strong>JOIN graph</strong>, <code>RELATIONSHIP_GRAPH</code> defines allowed foreign key paths. The compiler resolves JOINs automatically.</li>
+          <li><strong>Aggregation whitelist</strong>, <code>ALLOWED_AGGREGATIONS</code> controls which aggregate functions (COUNT, SUM, AVG) can be applied to which columns.</li>
+          <li><strong>Rate limiting</strong>, Redis fixed-window rate limiting per tenant, configurable by tier.</li>
+          <li><strong>Audit log</strong>, every prompt, compiled query, and result is logged to PostgreSQL for compliance.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Compiler design</h2>
+        <p>The SQL compiler is a pure function: JSON blueprint in, parameterized SQL out. No side effects, no shared state, no I/O. This makes it trivially testable and allows it to scale linearly across CPU cores.</p>
+        <p>Benchmarked at 3.6 microseconds median latency and 225k queries/sec on a single process, scaling to 641k queries/sec across 4 cores with 92% efficiency.</p>
+      </section>
+
+      <section>
+        <h2>Adaptability</h2>
+        <p>To use predicate with a different database schema, modify only two definitions in <code>app/compiler/sql_builder.py</code>:</p>
+        <ul>
+          <li><strong>ALLOWED_SCHEMA</strong>, your target tables and permitted columns.</li>
+          <li><strong>RELATIONSHIP_GRAPH</strong>, your foreign key definitions for automatic JOIN resolution.</li>
+        </ul>
+        <p>The rest of the pipeline (caching, auth, rate limiting, exports) adapts automatically.</p>
+      </section>
+      <p class="feedback">Found something unexpected? <a href="https://github.com/palmshed/predicate/issues">Report an issue</a>.</p>
+    </div>
+
+    <footer>
+      <p>&copy; 2026 Palmshed</p>
+      <ul class="footer-links">
+        <li><a href="./contact.html">Contact</a></li>
+        <li><a href="./trademark.html">Trademark</a></li>
+        <li><a href="./privacy.html">Privacy</a></li>
+        <li><a href="./terms.html">Terms</a></li>
+      </ul>
+    </footer>
+
+    <script>
+      (function() {
+        var toggle = document.querySelector('.mobile-menu-toggle');
+        var nav = document.getElementById('nav');
+        if (!toggle || !nav) return;
+        function sync() { toggle.setAttribute('aria-expanded', nav.classList.contains('active')); }
+        toggle.addEventListener('click', function(e) {
+          e.stopPropagation();
+          nav.classList.toggle('active');
+          sync();
+        });
+        document.addEventListener('click', function(e) {
+          if (nav.classList.contains('active') && !nav.contains(e.target) && e.target !== toggle) {
+            nav.classList.remove('active');
+            sync();
+          }
+        });
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape' && nav.classList.contains('active')) {
+            nav.classList.remove('active');
+            sync();
+            toggle.focus();
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

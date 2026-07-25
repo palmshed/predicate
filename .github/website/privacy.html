@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy ~ predicate</title>
+    <meta name="description" content="Privacy notice for the predicate project." />
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  </head>
+  <body>
+    <nav>
+      <span class="nav-mark">palmshed</span>
+      <ul class="nav-links" id="nav">
+        <li><a href="./index.html">Home</a></li>
+        <li><a href="./app.html">Architecture</a></li>
+        <li><a href="./support.html">Support</a></li>
+        <li><a href="https://github.com/palmshed/predicate">Source</a></li>
+      </ul>
+      <button class="mobile-menu-toggle" aria-label="Menu" aria-expanded="false">Menu</button>
+    </nav>
+
+    <div class="hero hero-short">
+      <div class="hero-content">
+        <h1>Privacy</h1>
+        <p>How we collect, use, and protect your information.</p>
+      </div>
+    </div>
+
+    <div class="page">
+      <section>
+        <h2>What we collect</h2>
+        <ul>
+          <li>Name and email when you contact us.</li>
+          <li>Standard browser and server metadata needed to serve the site.</li>
+          <li>Information you choose to send when you email us.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>How we use your data</h2>
+        <p>We use your information solely to respond to inquiries, operate and secure the site, improve the project based on direct feedback, and comply with legal obligations when required.</p>
+      </section>
+
+      <section>
+        <h2>Third-party services</h2>
+        <p>predicate uses the OpenAI API to process natural language queries. Your prompts are sent to OpenAI's servers for processing. This website links to GitHub. If you visit those services, their privacy policies apply.</p>
+      </section>
+
+      <section>
+        <h2>Your rights</h2>
+        <p>You may request access to your personal data, request correction or deletion, or ask what contact information we retain if you contacted us directly.</p>
+      </section>
+
+      <section>
+        <h2>Contact</h2>
+        <p>For privacy concerns, see the <a href="./contact.html">Contact page</a>.</p>
+      </section>
+
+      <section>
+        <h2>Version</h2>
+        <p>This policy is version 1.0.0, last updated July 26, 2026.</p>
+      </section>
+      <p class="feedback">Found something unexpected? <a href="https://github.com/palmshed/predicate/issues">Report an issue</a>.</p>
+    </div>
+
+    <footer>
+      <p>&copy; 2026 Palmshed</p>
+      <ul class="footer-links">
+        <li><a href="./contact.html">Contact</a></li>
+        <li><a href="./trademark.html">Trademark</a></li>
+        <li><a href="./privacy.html">Privacy</a></li>
+        <li><a href="./terms.html">Terms</a></li>
+      </ul>
+    </footer>
+
+    <script>
+      (function() {
+        var toggle = document.querySelector('.mobile-menu-toggle');
+        var nav = document.getElementById('nav');
+        if (!toggle || !nav) return;
+        function sync() { toggle.setAttribute('aria-expanded', nav.classList.contains('active')); }
+        toggle.addEventListener('click', function(e) {
+          e.stopPropagation();
+          nav.classList.toggle('active');
+          sync();
+        });
+        document.addEventListener('click', function(e) {
+          if (nav.classList.contains('active') && !nav.contains(e.target) && e.target !== toggle) {
+            nav.classList.remove('active');
+            sync();
+          }
+        });
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape' && nav.classList.contains('active')) {
+            nav.classList.remove('active');
+            sync();
+            toggle.focus();
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
