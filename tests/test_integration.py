@@ -46,7 +46,7 @@ def test_compile_endpoint_accepts_valid_api_key(monkeypatch, mocker):
 
     mocker.patch("app.database.cache.get_redis_client", return_value=None)
     mocker.patch("app.database.metrics.get_redis_client", return_value=None)
-    mocker.patch("app.database.audit.get_db_cursor", return_value=mock_svc)
+    mocker.patch("app.database.connection.execute_secure_query", return_value=[])
 
     response = client.post("/api/v1/query/compile", json={"prompt": "Show all customers"}, headers=headers)
     assert response.status_code == 200
