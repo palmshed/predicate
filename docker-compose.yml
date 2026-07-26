@@ -35,7 +35,10 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:securepassword123@postgres_db:5432/predicate_db
       - REDIS_URL=redis://redis_cache:6379/0
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
     depends_on:
       postgres_db:
         condition: service_healthy

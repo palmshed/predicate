@@ -4,6 +4,21 @@ from pydantic import BaseModel, Field
 from openai import OpenAI
 from app.agent.prompts import SYSTEM_PROMPT
 
+# Provider configuration
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai")
+LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+
+PROVIDER_CONFIG = {
+    "openai": {
+        "base_url": "https://api.openai.com/v1",
+        "api_key_env": "OPENAI_API_KEY",
+    },
+    "openrouter": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key_env": "OPENROUTER_API_KEY",
+    },
+}
+
 
 class FilterItem(BaseModel):
     column: str = Field(description="The exact database column name to apply the filter on.")
@@ -56,8 +71,18 @@ class QueryBlueprint(BaseModel):
 
 class AgentService:
     def __init__(self):
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        self.model = "gpt-4o-mini"
+        config = PROVIDER_CONFIG.get(LLM_PROVIDER, PROVIDER_CONFIG["openai"])
+        api_key = os.getenv(config["api_key_env"])
+
+        self.client = OpenAI(
+            api_key=api_key,
+            base_url=config["base_url"],
+            default_headers={
+                "HTTP-Referer": "https://predicate.palmshed.dev",
+                "X-Title": "Predicate AI Engine",
+            } if LLM_PROVIDER == "openrouter" else {},
+        )
+        self.model = LLM_MODEL
 
     def translate_text_to_blueprint(self, user_question: str) -> QueryBlueprint:
         response = self.client.beta.chat.completions.parse(
