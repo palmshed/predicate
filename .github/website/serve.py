@@ -19,7 +19,7 @@ class DevServer(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         parts = self.path.split("?", 1)
         clean_path = parts[0]
-        path = self.translate_path(self.path)
+        path = self.translate_path(clean_path)
         if os.path.isdir(path) and not clean_path.endswith("/"):
             new_path = clean_path + "/"
             if len(parts) > 1:
