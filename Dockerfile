@@ -10,10 +10,18 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
+    libssl-dev \
+    libffi-dev \
+    curl \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml uv.lock .python-version ./
-RUN uv sync --frozen --no-dev
+RUN for i in 1 2 3; do
+    uv sync --frozen --no-dev && break
+    echo "::warning::uv sync attempt $i failed; retrying"
+    sleep 5
+  done
 
 COPY . .
 
