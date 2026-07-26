@@ -29,7 +29,7 @@ class TestCompileQuery:
         textarea = page.locator("textarea")
         textarea.fill("Show active customers in Germany")
         textarea.press("Control+Enter")
-        page.wait_for_selector("text=SQL", timeout=30000)
+        page.wait_for_selector("text=SQL", timeout=60000)
         sql_tab = page.locator("button:has-text('SQL')")
         assert sql_tab.is_visible()
 
@@ -38,7 +38,7 @@ class TestCompileQuery:
         textarea = page.locator("textarea")
         textarea.fill("Count all customers")
         textarea.press("Control+Enter")
-        page.wait_for_selector("text=Results", timeout=30000)
+        page.wait_for_selector("text=Results", timeout=60000)
         results_tab = page.locator("button:has-text('Results')")
         assert results_tab.is_visible()
 

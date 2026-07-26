@@ -41,6 +41,7 @@ jobs:
   test:
     name: Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     services:
       postgres_db:
@@ -84,7 +85,24 @@ jobs:
         run: uv run pytest -v -W ignore --ignore=tests/test_e2e.py
 
       - name: Install Playwright browsers
-        run: uv run playwright install chromium --with-deps
+        run: |
+          for i in 1 2 3; do
+            uv run playwright install chromium --with-deps && exit 0
+            echo "::warning::playwright browser install attempt $i failed; retrying"
+          done
+          echo "::error::playwright browser install failed after 3 attempts"
+          exit 1
+
+      - name: Run DB migrations
+        env:
+          DATABASE_URL: postgresql://postgres:securepassword123@localhost:5432/predicate_db_test
+        run: |
+          set -e
+          if uv run which alembic >/dev/null 2>&1; then
+            uv run alembic upgrade head
+          else
+            echo "Alembic not available; skipping migrations"
+          fi
 
       - name: Start server for E2E
         env:
@@ -93,7 +111,9 @@ jobs:
           REQUIRE_AUTH: "false"
           OPENAI_API_KEY: sk-mock-key-for-testing-purposes-only
         run: |
+          set -e
           uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          SERVER_PID=$!
           for i in $(seq 1 30); do
             if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
               echo "Server ready"
@@ -101,6 +121,11 @@ jobs:
             fi
             sleep 1
           done
+          if ! curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+            echo "::error::Server failed to start within 30 seconds"
+            kill $SERVER_PID 2>/dev/null || true
+            exit 1
+          fi
 
       - name: Playwright E2E
         env:
@@ -108,4 +133,5 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
           REQUIRE_AUTH: "false"
           OPENAI_API_KEY: sk-mock-key-for-testing-purposes-only
+          CI: "1"
         run: uv run pytest tests/test_e2e.py -v
