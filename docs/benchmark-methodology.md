@@ -64,25 +64,25 @@ All tests use `TestClient` and require no external services.
 Run all phases:
 
 ```
-python benchmark.py
+python3 benchmark.py
 ```
 
 Run a specific phase:
 
 ```
-python benchmark.py --phase 1
+python3 benchmark.py --phase 1
 ```
 
 Configure concurrency and duration for the load test:
 
 ```
-python benchmark.py --phase 3 --users 100 --duration 30
+python3 benchmark.py --phase 3 --users 100 --duration 30
 ```
 
 Select a dataset size for database benchmarks:
 
 ```
-python benchmark.py --phase 2 --dataset large
+python3 benchmark.py --phase 2 --dataset large
 ```
 
 ## Environment Requirements
