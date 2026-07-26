@@ -30,13 +30,18 @@
     <div class="page">
       <section>
         <h2>Prerequisites</h2>
-        <pre><code>Docker and Docker Compose
-OpenAI API key</code></pre>
+        <pre><code>Python 3.14+ (or Docker)
+PostgreSQL 15+ (or Docker)
+Redis 7+ (or Docker)
+LLM API key (OpenRouter free tier or OpenAI)</code></pre>
       </section>
 
       <section>
         <h2>Environment</h2>
-        <pre><code>OPENAI_API_KEY       Required. Your OpenAI API key.
+        <pre><code>LLM_PROVIDER         "openai" or "openrouter". Default: openrouter.
+LLM_MODEL            Model ID. Default: nvidia/nemotron-3-super-120b-a12b:free.
+OPENROUTER_API_KEY   Required if LLM_PROVIDER=openrouter.
+OPENAI_API_KEY       Required if LLM_PROVIDER=openai.
 REQUIRE_AUTH         Optional. Set to "true" to enable API key validation.
 DATABASE_URL         Optional. PostgreSQL connection string.
 REDIS_URL            Optional. Redis connection string.</code></pre>
@@ -47,7 +52,7 @@ REDIS_URL            Optional. Redis connection string.</code></pre>
         <pre><code>git clone https://github.com/palmshed/predicate.git
 cd predicate
 cp .env.example .env
-# Set OPENAI_API_KEY in .env
+# Set OPENROUTER_API_KEY or OPENAI_API_KEY in .env
 docker-compose up --build</code></pre>
         <p class="subtext">API docs at http://localhost:8000/docs</p>
       </section>
@@ -98,7 +103,7 @@ docker-compose up --build</code></pre>
             <tr>
               <td data-label="Symptom">Compilation error</td>
               <td data-label="Cause">AI generated invalid blueprint</td>
-              <td data-label="Resolution">Check OpenAI API key. The Pydantic schema constrains output to valid blueprints.</td>
+              <td data-label="Resolution">Check LLM API key in .env. The Pydantic schema constrains output to valid blueprints.</td>
             </tr>
             <tr>
               <td data-label="Symptom">Redis connection error</td>

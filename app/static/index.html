@@ -122,8 +122,6 @@
             React.useEffect(() => { fetchMetrics(); }, []);
 
             const totalQueries = metrics?.historical_aggregates?.total_queries_processed || 0;
-            const cacheHits = metrics?.historical_aggregates?.cached_responses_served || 0;
-            const efficiency = metrics?.historical_aggregates?.infrastructure_efficiency_score || "-";
 
             const tabs = ["SQL", "Results", "Metrics", "Cache", "Audit"];
 
@@ -132,6 +130,12 @@
                 orders: ["id", "customer_id", "total_amount", "order_status"],
                 products: ["id", "product_name", "price", "category"]
             };
+
+            const examplePrompts = [
+                "Show active customers in Germany",
+                "List orders over $500",
+                "Average order value by country"
+            ];
 
             return (
                 <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
@@ -165,8 +169,8 @@
                                     <textarea
                                         value={prompt}
                                         onChange={(e) => setPrompt(e.target.value)}
-                                        placeholder="Show me orders over $500 from active customers..."
-                                        rows={4}
+                                        placeholder={"Describe the data you need...\n\nExample:\nShow active customers in Germany"}
+                                        rows={6}
                                         style={{ width: "100%", padding: "10px 12px", fontSize: "13px", lineHeight: "1.5", border: "1px solid #E5E7EB", borderRadius: "6px", background: "#FAFAFA", color: "#111827", outline: "none", resize: "none" }}
                                     />
                                     <div style={{ display: "flex", gap: "8px" }}>
@@ -246,8 +250,8 @@
                                         key={tab}
                                         onClick={() => setActiveTab(tab)}
                                         style={{
-                                            padding: "10px 20px", fontSize: "12px", fontWeight: 500, border: "none", borderBottom: activeTab === tab ? "2px solid #24d455" : "2px solid transparent", background: "transparent", cursor: "pointer",
-                                            color: activeTab === tab ? "#111827" : "#9CA3AF"
+                                            padding: "12px 24px", fontSize: "12px", fontWeight: 500, border: "none", borderBottom: activeTab === tab ? "2px solid #24d455" : "2px solid transparent", background: "transparent", cursor: "pointer",
+                                            color: activeTab === tab ? "#111827" : "#6B7280"
                                         }}
                                     >
                                         {tab}
@@ -264,20 +268,31 @@
 
                             <div style={{ flex: 1, overflow: "auto", background: "#FFFFFF" }}>
                                 {!response && !loading && (
-                                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#D1D5DB", paddingBottom: "80px" }}>
+                                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", height: "100%", paddingBottom: "80px" }}>
                                         <div style={{ textAlign: "center" }}>
-                                            <div style={{ fontSize: "36px", marginBottom: "12px", opacity: 0.3 }}>
-                                                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                                            <div style={{ fontSize: "36px", marginBottom: "16px", opacity: 0.15 }}>
+                                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
                                                     <path d="M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h2l1-1 1 1h4"/>
                                                     <path d="M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-3l-1-1-1 1h-3"/>
                                                     <path d="M5.89 9.71c-2.15 2.15-2.3 5.47-.35 7.43l4.24-4.25.7-.7.71-.71 2.12-2.12c-1.95-1.96-5.27-1.8-7.42.35"/>
                                                     <path d="M11 15.5c.5 2.5-.17 4.5-1 6.5h4c2-5.5-.5-12-1-14"/>
                                                 </svg>
                                             </div>
-                                            <div style={{ fontSize: "13px", fontWeight: 500, color: "#9CA3AF" }}>Ready</div>
-                                            <div style={{ fontSize: "12px", color: "#D1D5DB", marginTop: "4px" }}>Describe the data to retrieve.</div>
-                                            <div style={{ fontSize: "12px", color: "#D1D5DB" }}>SQL, results, metrics, and cache activity</div>
-                                            <div style={{ fontSize: "12px", color: "#D1D5DB" }}>appear here after compilation.</div>
+                                            <div style={{ fontSize: "14px", fontWeight: 500, color: "#6B7280", marginBottom: "16px" }}>Ready</div>
+                                            <div style={{ fontSize: "12px", color: "#9CA3AF", marginBottom: "8px" }}>Try asking:</div>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "6px", alignItems: "center" }}>
+                                                {examplePrompts.map((ex) => (
+                                                    <button
+                                                        key={ex}
+                                                        onClick={() => setPrompt(ex)}
+                                                        style={{ fontSize: "12px", color: "#6B7280", background: "none", border: "none", cursor: "pointer", padding: "4px 8px", borderRadius: "4px", transition: "background 0.1s" }}
+                                                        onMouseEnter={(e) => e.target.style.background = "#F3F4F6"}
+                                                        onMouseLeave={(e) => e.target.style.background = "none"}
+                                                    >
+                                                        {ex}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -293,9 +308,11 @@
 
                                 {response && activeTab === "SQL" && (
                                     <div className="tab-content" style={{ padding: "20px" }}>
-                                        <pre style={{ fontSize: "12px", lineHeight: "1.7", color: "#374151", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                                            {response.compiled_sql || JSON.stringify(response, null, 2)}
-                                        </pre>
+                                        <div style={{ background: "#F9FAFB", border: "1px solid #F3F4F6", borderRadius: "8px", padding: "16px" }}>
+                                            <pre style={{ fontSize: "12px", lineHeight: "1.7", color: "#374151", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                                                {response.compiled_sql || JSON.stringify(response, null, 2)}
+                                            </pre>
+                                        </div>
                                     </div>
                                 )}
 
@@ -370,12 +387,12 @@
 
                     <footer style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", height: "28px", borderTop: "1px solid #E5E7EB", background: "#FFFFFF", flexShrink: 0, fontSize: "11px", color: "#9CA3AF", fontFamily: "'JetBrains Mono', monospace" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                            <span>predicate v1.0.0</span>
+                            <span>predicate</span>
                             <span style={{ color: loading ? "#F59E0B" : "#86EFAC" }}>{loading ? "compiling" : "ready"}</span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                            <span style={{ color: "#86EFAC" }}>Redis</span>
-                            <span style={{ color: "#86EFAC" }}>PostgreSQL</span>
+                            <span style={{ display: "flex", alignItems: "center", gap: "5px" }}><span style={{ width: "5px", height: "5px", background: "#86EFAC", borderRadius: "50%" }} />Redis</span>
+                            <span style={{ display: "flex", alignItems: "center", gap: "5px" }}><span style={{ width: "5px", height: "5px", background: "#86EFAC", borderRadius: "50%" }} />PostgreSQL</span>
                             {metrics && <span>{totalQueries} queries</span>}
                         </div>
                     </footer>

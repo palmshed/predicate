@@ -141,21 +141,27 @@ User Text Input
 predicate/
 ├── app/
 │   ├── main.py              # FastAPI entry point + cache interception
-│   ├── config.py            # Environment configuration
+│   ├── worker.py            # Celery background tasks
 │   ├── agent/
 │   │   ├── prompts.py       # AI system prompt
-│   │   └── services.py      # OpenAI structured output layer
+│   │   └── services.py      # Multi-provider LLM layer (OpenAI, OpenRouter)
+│   ├── auth/
+│   │   ├── security.py      # API key validation
+│   │   └── rate_limiter.py  # Redis rate limiting
 │   ├── compiler/
-│   │   ├── validator.py     # Schema validation
 │   │   └── sql_builder.py   # JOIN-aware parameterized SQL generation
 │   └── database/
 │       ├── connection.py    # PostgreSQL connection pooling
-│       └── cache.py         # Redis caching tier
-├── tests/                   # pytest suite (14 tests)
-├── docs/
-│   └── pitch_deck_blueprint.md
-├── Dockerfile
-├── docker-compose.yml       # PostgreSQL + Redis + API
+│       ├── cache.py         # Redis caching tier
+│       ├── metrics.py       # Tenant metrics
+│       └── audit.py         # Compliance audit log
+├── alembic/                 # Database migrations
+├── tests/                   # pytest suite (37 tests)
+├── hero/                    # SVG hero generator
+├── deploy/                  # Nginx, deployment scripts
+├── docs/                    # Architecture, pitch deck, production checklist
+├── docker-compose.yml       # PostgreSQL + Redis + API + Celery
+├── docker-compose.prod.yml  # Production containers
 ├── init.sql
 └── requirements.txt
 ```

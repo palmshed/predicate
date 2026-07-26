@@ -4,9 +4,8 @@
 
 ### Security
 
-- [ ] Rotate `SECRET_KEY` and `OPENAI_API_KEY` from defaults
+- [ ] Rotate `OPENROUTER_API_KEY` or `OPENAI_API_KEY` from defaults
 - [ ] Set `REQUIRE_AUTH=true` in production environment
-- [ ] Configure `ALLOWED_ORIGINS` for CORS
 - [ ] Enable SSL/TLS termination at load balancer
 - [ ] Review and update `MOCK_TENANT_REGISTRY` with production API keys
 - [ ] Set strong PostgreSQL password (not `securepassword123`)
@@ -19,13 +18,18 @@
 # Required
 DATABASE_URL=postgresql://user:password@host:5432/predicate_db
 REDIS_URL=redis://:password@host:6379/0
-OPENAI_API_KEY=sk-...
-SECRET_KEY=<random-64-char-hex>
+
+# LLM Provider (configure the one matching LLM_PROVIDER)
+LLM_PROVIDER=openrouter
+LLM_MODEL=nvidia/nemotron-3-super-120b-a12b:free
+OPENROUTER_API_KEY=sk-or-v1-...
+# OR
+# LLM_PROVIDER=openai
+# LLM_MODEL=gpt-4o-mini
+# OPENAI_API_KEY=sk-...
 
 # Production settings
 REQUIRE_AUTH=true
-ENVIRONMENT=production
-LOG_LEVEL=INFO
 ```
 
 ### Database

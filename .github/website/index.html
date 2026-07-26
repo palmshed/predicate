@@ -60,15 +60,15 @@ res = requests.post(
 )
 
 data = res.json()
-print(data["sql"])       # SELECT orders.id ...
-print(data["params"])   # ['tenant_alpha', 500, 'active']
-print(data["rows"])     # [{...}, {...}]</code></pre>
+print(data["compiled_sql"])   # SELECT orders.id ...
+print(data["parameters"])     # ['tenant_alpha', 500, 'active']
+print(data["results"])        # [{...}, {...}]</code></pre>
       </section>
 
       <section>
         <h2>What it does</h2>
         <ul>
-          <li><strong>compile</strong>, translate natural language into parameterized SQL via OpenAI Structured Outputs.</li>
+          <li><strong>compile</strong>, translate natural language into parameterized SQL via configurable LLM providers (OpenAI, OpenRouter).</li>
           <li><strong>execute</strong>, run the query against PostgreSQL with automatic tenant isolation.</li>
           <li><strong>cache</strong>, Redis-backed SHA-256 query signature cache for sub-2ms repeated lookups.</li>
           <li><strong>rate limit</strong>, per-tenant fixed-window rate limiting across three tiers.</li>
@@ -82,7 +82,7 @@ print(data["rows"])     # [{...}, {...}]</code></pre>
         <p>The SQL compiler generates parameterized queries in 3.6 microseconds at median, scaling to 641k queries/sec across 4 CPU cores with zero lock contention.</p>
         <ul>
           <li><strong>3.6 us</strong> median compile latency</li>
-          <li><strong>225k q/s</strong> single-process throughput</li>
+          <li><strong>174k q/s</strong> single-process throughput</li>
           <li><strong>99.2%</strong> linear scaling efficiency (2 processes)</li>
           <li><strong>1 us</strong> SHA-256 signature overhead</li>
         </ul>

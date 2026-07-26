@@ -67,9 +67,15 @@ async def serve_workspace_interface():
 
 @app.get("/health", status_code=status.HTTP_200_OK)
 def health_check():
+    provider = os.getenv("LLM_PROVIDER", "openai")
+    if provider == "openrouter":
+        key_configured = bool(os.getenv("OPENROUTER_API_KEY"))
+    else:
+        key_configured = bool(os.getenv("OPENAI_API_KEY"))
     return {
         "status": "healthy",
-        "openai_key_configured": bool(os.getenv("OPENAI_API_KEY"))
+        "llm_provider": provider,
+        "llm_key_configured": key_configured
     }
 
 

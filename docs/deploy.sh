@@ -12,11 +12,14 @@ sudo systemctl enable docker
 sudo usermod -aG docker $USER
 
 # 3. Clone the source repository onto the virtual cloud directory host
-git clone https://github.com/your-org/predicate.git
+git clone https://github.com/palmshed/predicate.git
 cd predicate
 
 # 4. Prompt host operator to declare target secret keys manually inside shell environment
-export OPENAI_API_KEY="sk-proj-your-production-secret-key-string"
+# Set your LLM provider key (OpenRouter or OpenAI)
+export OPENROUTER_API_KEY="your-openrouter-api-key"
+# OR
+# export OPENAI_API_KEY="your-openai-api-key"
 
 # 4.5 Install Certbot utility tools for generating free SSL certificates
 sudo apt-get install -y certbot

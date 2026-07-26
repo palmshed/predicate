@@ -32,8 +32,8 @@
         <h2>Pipeline</h2>
         <p>Every query follows a strict path that separates the AI layer from the database layer. The AI generates a structured JSON blueprint. The compiler translates that blueprint into parameterized SQL. The AI never sees or generates raw SQL.</p>
         <pre><code>User Text
-  -> OpenAI Structured Outputs (Pydantic schema)
-  -> JSON Blueprint
+  -> LLM Provider (OpenAI / OpenRouter)
+  -> JSON Blueprint (Pydantic validated)
   -> SQL Compiler (parameterized, tenant-isolated)
   -> PostgreSQL Execution
   -> Cached Response</code></pre>
@@ -59,7 +59,7 @@
       <section>
         <h2>Compiler design</h2>
         <p>The SQL compiler is a pure function: JSON blueprint in, parameterized SQL out. No side effects, no shared state, no I/O. This makes it trivially testable and allows it to scale linearly across CPU cores.</p>
-        <p>Benchmarked at 3.6 microseconds median latency and 225k queries/sec on a single process, scaling to 641k queries/sec across 4 cores with 92% efficiency.</p>
+        <p>Benchmarked at 3.6 microseconds median latency and 174k queries/sec on a single process, scaling to 641k queries/sec across 4 cores with 92% efficiency.</p>
       </section>
 
       <section>
