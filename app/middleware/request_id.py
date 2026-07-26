@@ -1,9 +1,11 @@
 import uuid
-from typing import Callable
+from collections.abc import Callable
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
-from app.observability.logging import request_id_var, tenant_id_var
+
+from app.observability.logging import request_id_var
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):

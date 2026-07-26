@@ -1,14 +1,45 @@
-name: Predicate Core CI Pipeline
+name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main]
   pull_request:
-    branches: [ main, master ]
+    branches: [main]
 
 jobs:
-  test-suite:
-    name: Execute Automated Test Matrix
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - run: uv python install 3.14
+      - run: uv sync --frozen --dev
+
+      - name: Ruff format check
+        run: uv run ruff format --check .
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - run: uv python install 3.14
+      - run: uv sync --frozen --dev
+
+      - name: BasedPyright
+        run: uv run basedpyright app/
+
+  test:
+    name: Tests
     runs-on: ubuntu-latest
 
     services:
@@ -37,24 +68,28 @@ jobs:
           --health-retries 5
 
     steps:
-    - name: Checkout Code Repository
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - run: uv python install 3.14
+      - run: uv sync --frozen --dev
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@v4
-      with:
-        version: "latest"
+      - name: Pytest
+        env:
+          DATABASE_URL: postgresql://postgres:securepassword123@localhost:5432/predicate_db_test
+          REDIS_URL: redis://localhost:6379/0
+          REQUIRE_AUTH: "true"
+          OPENAI_API_KEY: sk-mock-key-for-testing-purposes-only
+        run: uv run pytest -v -W ignore --ignore=tests/test_e2e.py
 
-    - name: Setup Python Runtime Environment
-      run: uv python install 3.14
+      - name: Install Playwright browsers
+        run: uv run playwright install chromium --with-deps
 
-    - name: Install Dependencies
-      run: uv sync --dev
-
-    - name: Run Pytest Automation Matrix
-      env:
-        DATABASE_URL: postgresql://postgres:securepassword123@localhost:5432/predicate_db_test
-        REDIS_URL: redis://localhost:6379/0
-        REQUIRE_AUTH: true
-        OPENAI_API_KEY: sk-mock-key-for-testing-purposes-only
-      run: uv run pytest -v -W ignore
+      - name: Playwright E2E
+        env:
+          DATABASE_URL: postgresql://postgres:securepassword123@localhost:5432/predicate_db_test
+          REDIS_URL: redis://localhost:6379/0
+          REQUIRE_AUTH: "false"
+          OPENAI_API_KEY: sk-mock-key-for-testing-purposes-only
+        run: uv run pytest tests/test_e2e.py -v

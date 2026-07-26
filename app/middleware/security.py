@@ -1,11 +1,12 @@
-import secrets
 import hashlib
 import hmac
+import secrets
 import time
-from typing import Callable
+from collections.abc import Callable
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response, JSONResponse
+from starlette.responses import JSONResponse, Response
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -73,12 +74,16 @@ def _validate_csrf_token(token_value: str, secret: str) -> bool:
 
 
 class CSRFMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, secret_key: str = None):
+    def __init__(self, app, secret_key: str | None = None):
         super().__init__(app)
         self.secret_key = secret_key or secrets.token_hex(32)
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        if request.url.path.startswith("/health") or request.url.path.startswith("/ready") or request.url.path == "/metrics":
+        if (
+            request.url.path.startswith("/health")
+            or request.url.path.startswith("/ready")
+            or request.url.path == "/metrics"
+        ):
             return await call_next(request)
 
         if request.method in ("GET", "HEAD", "OPTIONS"):

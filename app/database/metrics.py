@@ -1,5 +1,6 @@
 import time
-from typing import Dict, Any
+from typing import Any
+
 from app.database.cache import get_redis_client
 
 
@@ -25,7 +26,7 @@ def record_tenant_metric(tenant_id: str, is_cache_hit: bool, target_table: str) 
         pass
 
 
-def get_tenant_metrics(tenant_id: str, plan_limit: int) -> Dict[str, Any]:
+def get_tenant_metrics(tenant_id: str, plan_limit: int) -> dict[str, Any]:
     client = get_redis_client()
     if not client:
         return {"error": "Metrics storage cluster currently unreachable."}
@@ -47,14 +48,16 @@ def get_tenant_metrics(tenant_id: str, plan_limit: int) -> Dict[str, Any]:
             "current_minute_usage": {
                 "requests_per_minute": current_rpm,
                 "tier_limit_ceiling": plan_limit,
-                "capacity_percentage_used": round((current_rpm / plan_limit) * 100, 1) if plan_limit > 0 else 0
+                "capacity_percentage_used": round((current_rpm / plan_limit) * 100, 1)
+                if plan_limit > 0
+                else 0,
             },
             "historical_aggregates": {
                 "total_queries_processed": total,
                 "cached_responses_served": hits,
                 "database_fallbacks_executed": misses,
-                "infrastructure_efficiency_score": f"{efficiency_ratio}%"
-            }
+                "infrastructure_efficiency_score": f"{efficiency_ratio}%",
+            },
         }
     except Exception as e:
         return {"error": f"Failed to calculate real-time usage metrics: {str(e)}"}

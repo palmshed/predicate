@@ -1,17 +1,13 @@
 import pytest
+
 from app.compiler.sql_builder import build_secure_query
 
 
 def test_sum_aggregation_compilation():
     blueprint = {
         "target_table": "orders",
-        "aggregation": {
-            "type": "sum",
-            "column": "total_amount"
-        },
-        "filters": [
-            {"column": "order_status", "operator": "equals", "value": "completed"}
-        ]
+        "aggregation": {"type": "sum", "column": "total_amount"},
+        "filters": [{"column": "order_status", "operator": "equals", "value": "completed"}],
     }
 
     sql, params = build_secure_query(blueprint, tenant_id="tenant_alpha")
@@ -25,11 +21,8 @@ def test_sum_aggregation_compilation():
 def test_count_wildcard_aggregation():
     blueprint = {
         "target_table": "customers",
-        "aggregation": {
-            "type": "count",
-            "column": "*"
-        },
-        "filters": []
+        "aggregation": {"type": "count", "column": "*"},
+        "filters": [],
     }
 
     sql, params = build_secure_query(blueprint, tenant_id="tenant_beta")
@@ -41,11 +34,8 @@ def test_count_wildcard_aggregation():
 def test_avg_aggregation_compilation():
     blueprint = {
         "target_table": "products",
-        "aggregation": {
-            "type": "avg",
-            "column": "price"
-        },
-        "filters": []
+        "aggregation": {"type": "avg", "column": "price"},
+        "filters": [],
     }
 
     sql, params = build_secure_query(blueprint, tenant_id="tenant_alpha")
@@ -59,11 +49,8 @@ def test_avg_aggregation_compilation():
 def test_invalid_aggregation_column_rejection():
     invalid_blueprint = {
         "target_table": "products",
-        "aggregation": {
-            "type": "avg",
-            "column": "malicious_non_existent_field"
-        },
-        "filters": []
+        "aggregation": {"type": "avg", "column": "malicious_non_existent_field"},
+        "filters": [],
     }
 
     with pytest.raises(ValueError) as excinfo:
@@ -75,11 +62,8 @@ def test_invalid_aggregation_column_rejection():
 def test_aggregation_with_cross_table_column():
     blueprint = {
         "target_table": "orders",
-        "aggregation": {
-            "type": "sum",
-            "column": "orders.total_amount"
-        },
-        "filters": []
+        "aggregation": {"type": "sum", "column": "orders.total_amount"},
+        "filters": [],
     }
 
     sql, params = build_secure_query(blueprint, tenant_id="tenant_alpha")

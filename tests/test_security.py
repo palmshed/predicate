@@ -1,7 +1,8 @@
 import pytest
 from fastapi import HTTPException
-from app.auth.security import validate_api_key
+
 from app.auth.rate_limiter import check_rate_limit
+from app.auth.security import validate_api_key
 
 
 def test_auth_disabled_by_default(monkeypatch):
@@ -76,9 +77,7 @@ def test_rate_limiter_sets_ttl_on_first_request(mocker):
     mock_context = {"tenant_id": "tenant_alpha", "plan": "enterprise"}
     check_rate_limit(tenant_context=mock_context)
 
-    mock_redis.expire.assert_called_once_with(
-        mock_redis.incr.call_args[0][0], 60
-    )
+    mock_redis.expire.assert_called_once_with(mock_redis.incr.call_args[0][0], 60)
 
 
 def test_rate_limiter_bypasses_when_redis_unavailable(mocker):

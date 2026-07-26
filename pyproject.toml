@@ -51,4 +51,58 @@ dev = [
     "pytest>=9.1.1",
     "pytest-mock>=3.15.1",
     "pytest-playwright>=0.8.0",
+    "ruff>=0.11.0",
+    "basedpyright>=1.28.0",
+    "bandit>=1.8.0",
+    "pip-audit>=2.7.0",
 ]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "S", "C4", "SIM", "TCH"]
+ignore = [
+    "S101",   # assert allowed in tests
+    "S104",   # bind 0.0.0.0 ok for container/Docker
+    "S110",   # try-except-pass is intentional for Redis/DB resilience
+    "S603",   # subprocess calls are intentional
+    "S607",   # partial path ok for known commands
+    "B008",   # function calls in default args (FastAPI Depends)
+    "UP007",  # allow X | Y union syntax
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+"benchmark.py" = [
+    "S101", "S311", "S608",             # benchmark-specific: asserts, random, f-string SQL
+    "T201",                             # print allowed in CLI
+    "E501",                             # print output can be long
+    "B023",                             # closure-captured lists are intentional
+    "C401", "E741", "SIM105", "SIM108", "F841",
+]
+"app/main.py" = ["E402"]              # load_dotenv/setup_logging must precede imports
+"app/middleware/**" = ["TCH"]          # runtime middleware, type-checking blocks not applicable
+"alembic/**" = ["TCH", "E501"]        # auto-generated migration files
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.basedpyright]
+typeCheckingMode = "standard"
+pythonVersion = "3.14"
+venvPath = "."
+venv = ".venv"
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownParameterType = false
+reportUnknownVariableType = false
+reportUnknownArgumentType = false
+reportPrivateUsage = false
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101"]

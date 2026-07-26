@@ -1,6 +1,6 @@
 import time
-from typing import Optional
 from contextlib import contextmanager
+
 from app.observability.logging import get_logger
 
 logger = get_logger("trace")
@@ -9,7 +9,7 @@ logger = get_logger("trace")
 class TraceContext:
     __slots__ = ("request_id", "tenant_id", "spans", "_start")
 
-    def __init__(self, request_id: str, tenant_id: Optional[str] = None):
+    def __init__(self, request_id: str, tenant_id: str | None = None):
         self.request_id = request_id
         self.tenant_id = tenant_id
         self.spans = []
@@ -19,8 +19,7 @@ class TraceContext:
         span = {"name": name, "ms": round(duration_ms, 2), **extra}
         self.spans.append(span)
         logger.info(
-            f"span:{name}",
-            extra={"route": name, "duration_ms": round(duration_ms, 2), **extra}
+            f"span:{name}", extra={"route": name, "duration_ms": round(duration_ms, 2), **extra}
         )
 
     @contextmanager
@@ -56,7 +55,9 @@ def trace_span(name: str, **extra):
         yield
     except Exception as e:
         duration = (time.perf_counter() - start) * 1000
-        logger.info(f"span:{name}", extra={"duration_ms": round(duration, 2), "error": str(e), **extra})
+        logger.info(
+            f"span:{name}", extra={"duration_ms": round(duration, 2), "error": str(e), **extra}
+        )
         raise
     else:
         duration = (time.perf_counter() - start) * 1000

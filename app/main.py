@@ -1,44 +1,48 @@
 import os
-import time
 import resource
-from datetime import datetime, timezone
-from fastapi import FastAPI, HTTPException, status, Depends
+import time
+from datetime import UTC, datetime
+
+from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel, Field
-from dotenv import load_dotenv
 
 load_dotenv()
 
-from app.observability import setup_logging, get_logger, TraceContext, metrics, PrometheusExporter
+from app.observability import PrometheusExporter, TraceContext, get_logger, metrics, setup_logging
 from app.observability.logging import request_id_var, tenant_id_var
 
 setup_logging()
 logger = get_logger("main")
 
-from app.agent.services import AgentService
-from app.compiler.sql_builder import build_secure_query
-from app.database.connection import execute_secure_query, get_connection_pool, get_readonly_connection_pool
-from app.database.cache import get_cached_results, set_cached_results, get_redis_client
-from app.auth.security import validate_api_key
-from app.auth.rate_limiter import check_rate_limit, TIER_LIMITS
-from app.database.metrics import record_tenant_metric, get_tenant_metrics
-from app.database.audit import sink_compliance_audit_log
-from app.middleware.security import SecurityHeadersMiddleware, CSRFMiddleware
-from app.middleware.request_id import RequestIDMiddleware
-from app.worker import execute_heavy_export_task
 from celery.result import AsyncResult
+
+from app.agent.services import AgentService
+from app.auth.rate_limiter import TIER_LIMITS, check_rate_limit
+from app.compiler.sql_builder import build_secure_query
+from app.database.audit import sink_compliance_audit_log
+from app.database.cache import get_cached_results, get_redis_client, set_cached_results
+from app.database.connection import (
+    execute_secure_query,
+    get_connection_pool,
+)
+from app.database.metrics import get_tenant_metrics, record_tenant_metric
+from app.middleware.request_id import RequestIDMiddleware
+from app.middleware.security import CSRFMiddleware, SecurityHeadersMiddleware
+from app.worker import execute_heavy_export_task
 
 MAX_PROMPT_LENGTH = int(os.getenv("MAX_PROMPT_LENGTH", "2000"))
 QUERY_TIMEOUT_SECONDS = int(os.getenv("QUERY_TIMEOUT_SECONDS", "30"))
 APP_VERSION = os.getenv("APP_VERSION", "1.0.0")
 GIT_COMMIT = os.getenv("GIT_COMMIT", "unknown")
-BUILD_DATE = os.getenv("BUILD_DATE", datetime.now(timezone.utc).isoformat())
+BUILD_DATE = os.getenv("BUILD_DATE", datetime.now(UTC).isoformat())
 
 app = FastAPI(
     title="Predicate AI Engine",
     description="Secure Natural Language to SQL Compilation Platform",
-    version=APP_VERSION
+    version=APP_VERSION,
 )
 
 app.add_middleware(RequestIDMiddleware)
@@ -66,7 +70,7 @@ class QueryRequest(BaseModel):
         ...,
         max_length=MAX_PROMPT_LENGTH,
         description="The plain natural language question from the user.",
-        json_schema_extra={"example": "Show me the top 5 orders over 200 dollars."}
+        json_schema_extra={"example": "Show me the top 5 orders over 200 dollars."},
     )
 
 
@@ -106,7 +110,7 @@ def _get_process_stats() -> dict:
 async def serve_workspace_interface():
     static_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
     if os.path.exists(static_path):
-        with open(static_path, "r") as file:
+        with open(static_path) as file:
             return HTMLResponse(content=file.read(), status_code=200)
     return HTMLResponse(content="<h1>Interface file missing.</h1>", status_code=404)
 
@@ -170,8 +174,7 @@ async def prometheus_metrics():
 
 @app.post("/api/v1/query/compile", response_model=QueryResponse, status_code=status.HTTP_200_OK)
 async def compile_natural_language_query(
-    payload: QueryRequest,
-    tenant_context: dict = Depends(check_rate_limit)
+    payload: QueryRequest, tenant_context: dict = Depends(check_rate_limit)
 ):
     req_id = request_id_var.get() or "unknown"
     tid = tenant_context["tenant_id"]
@@ -182,7 +185,7 @@ async def compile_natural_language_query(
     trace = TraceContext(request_id=req_id, tenant_id=tid)
     metrics.inc("requests_total")
     metrics.inc("active_executions")
-    metrics.inc(f"requests_by_provider_total{{provider=\"{provider}\"}}")
+    metrics.inc(f'requests_by_provider_total{{provider="{provider}"}}')
 
     compile_duration = None
     validate_duration = None
@@ -193,8 +196,7 @@ async def compile_natural_language_query(
         metrics.inc("validation_failures")
         metrics.dec("active_executions")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The prompt string cannot be empty."
+            status_code=status.HTTP_400_BAD_REQUEST, detail="The prompt string cannot be empty."
         )
 
     try:
@@ -206,12 +208,12 @@ async def compile_natural_language_query(
 
         compile_duration = trace.spans[-1]["ms"] if trace.spans else 0
         metrics.observe("compile_duration_milliseconds", compile_duration)
-        metrics.observe(f"compile_duration_by_provider_milliseconds{{provider=\"{provider}\"}}", compile_duration)
+        metrics.observe(
+            f'compile_duration_by_provider_milliseconds{{provider="{provider}"}}', compile_duration
+        )
 
         with trace.span("validate"):
-            sql_string, query_parameters = build_secure_query(
-                blueprint_dict, tenant_id=tid
-            )
+            sql_string, query_parameters = build_secure_query(blueprint_dict, tenant_id=tid)
         validate_duration = trace.spans[-1]["ms"] if trace.spans else 0
         metrics.observe("validate_duration_milliseconds", validate_duration)
 
@@ -221,7 +223,9 @@ async def compile_natural_language_query(
         if cached_records is not None:
             metrics.inc("cache_hits")
             metrics.inc("queries_completed")
-            record_tenant_metric(tid, is_cache_hit=True, target_table=blueprint_dict["target_table"])
+            record_tenant_metric(
+                tid, is_cache_hit=True, target_table=blueprint_dict["target_table"]
+            )
 
             sink_compliance_audit_log(
                 tenant_id=tid,
@@ -246,7 +250,7 @@ async def compile_natural_language_query(
                     "target_table": blueprint_dict["target_table"],
                     "compile_ms": compile_duration,
                     "validate_ms": validate_duration,
-                }
+                },
             )
 
             return QueryResponse(
@@ -264,8 +268,7 @@ async def compile_natural_language_query(
 
         with trace.span("execute"):
             db_results, db_query_duration = execute_secure_query(
-                sql_string, query_parameters,
-                timeout_seconds=QUERY_TIMEOUT_SECONDS
+                sql_string, query_parameters, timeout_seconds=QUERY_TIMEOUT_SECONDS
             )
         execute_duration = trace.spans[-1]["ms"] if trace.spans else 0
         metrics.observe("execute_duration_milliseconds", execute_duration)
@@ -302,7 +305,7 @@ async def compile_natural_language_query(
                 "execute_ms": execute_duration,
                 "db_query_ms": db_query_duration,
                 "duration_ms": trace.total_ms,
-            }
+            },
         )
 
         return QueryResponse(
@@ -318,37 +321,44 @@ async def compile_natural_language_query(
 
     except ValueError as ve:
         metrics.inc("validation_failures")
-        metrics.inc(f"errors_by_provider_total{{provider=\"{provider}\"}}")
+        metrics.inc(f'errors_by_provider_total{{provider="{provider}"}}')
         logger.warning(
             "query_validation_failed",
-            extra={"route": "/api/v1/query/compile", "error_code": "VALIDATION_ERROR"}
+            extra={"route": "/api/v1/query/compile", "error_code": "VALIDATION_ERROR"},
         )
         sink_compliance_audit_log(
-            tenant_id=tid, user_prompt=prompt, compiled_sql="",
-            parameters=[], cache_hit=False, request_id=req_id,
+            tenant_id=tid,
+            user_prompt=prompt,
+            compiled_sql="",
+            parameters=[],
+            cache_hit=False,
+            request_id=req_id,
             compile_ms=compile_duration,
             error_code="VALIDATION_ERROR",
         )
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(ve)
-        )
-    except Exception as e:
+            detail=str(ve),
+        ) from ve
+    except Exception:
         metrics.inc("query_failures")
-        metrics.inc(f"errors_by_provider_total{{provider=\"{provider}\"}}")
+        metrics.inc(f'errors_by_provider_total{{provider="{provider}"}}')
         logger.error(
-            "query_failed",
-            extra={"route": "/api/v1/query/compile", "error_code": "INTERNAL_ERROR"}
+            "query_failed", extra={"route": "/api/v1/query/compile", "error_code": "INTERNAL_ERROR"}
         )
         sink_compliance_audit_log(
-            tenant_id=tid, user_prompt=prompt, compiled_sql="",
-            parameters=[], cache_hit=False, request_id=req_id,
+            tenant_id=tid,
+            user_prompt=prompt,
+            compiled_sql="",
+            parameters=[],
+            cache_hit=False,
+            request_id=req_id,
             error_code="INTERNAL_ERROR",
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while compiling your request."
-        )
+            detail="An error occurred while compiling your request.",
+        ) from None
     finally:
         metrics.dec("active_executions")
 
@@ -363,8 +373,7 @@ async def get_live_tenant_analytics(tenant_context: dict = Depends(check_rate_li
 
 @app.post("/api/v1/export/async", status_code=status.HTTP_202_ACCEPTED)
 async def trigger_bulk_data_export(
-    payload: QueryRequest,
-    tenant_context: dict = Depends(check_rate_limit)
+    payload: QueryRequest, tenant_context: dict = Depends(check_rate_limit)
 ):
     req_id = request_id_var.get() or "unknown"
     prompt = payload.prompt.strip()
@@ -377,28 +386,16 @@ async def trigger_bulk_data_export(
 
     metrics.inc("exports_total")
 
-    task = execute_heavy_export_task.delay(
-        blueprint_dict, tenant_context["tenant_id"]
-    )
+    task = execute_heavy_export_task.delay(blueprint_dict, tenant_context["tenant_id"])  # type: ignore[union-attr]
 
-    logger.info(
-        "export_queued",
-        extra={"route": "/api/v1/export/async", "request_id": req_id}
-    )
+    logger.info("export_queued", extra={"route": "/api/v1/export/async", "request_id": req_id})
 
-    return {
-        "status": "queued",
-        "task_id": task.id,
-        "poll_url": f"/api/v1/export/status/{task.id}"
-    }
+    return {"status": "queued", "task_id": task.id, "poll_url": f"/api/v1/export/status/{task.id}"}
 
 
 @app.get("/api/v1/export/status/{task_id}", status_code=status.HTTP_200_OK)
-async def check_bulk_export_status(
-    task_id: str,
-    tenant_context: dict = Depends(check_rate_limit)
-):
-    task_result = AsyncResult(task_id, app=execute_heavy_export_task.app)
+async def check_bulk_export_status(task_id: str, tenant_context: dict = Depends(check_rate_limit)):
+    task_result = AsyncResult(task_id, app=execute_heavy_export_task.app)  # type: ignore[union-attr]
 
     response_payload = {"task_id": task_id, "state": task_result.state}
 

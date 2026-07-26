@@ -1,31 +1,22 @@
-from typing import Dict, Any, Tuple, List
+from typing import Any
 
 ALLOWED_SCHEMA = {
     "customers": {"id", "name", "email", "country", "status", "created_at"},
     "orders": {"id", "customer_id", "total_amount", "order_status", "purchase_date"},
-    "products": {"id", "product_name", "price", "stock_count", "category"}
+    "products": {"id", "product_name", "price", "stock_count", "category"},
 }
 
 RELATIONSHIP_GRAPH = {
     ("orders", "customers"): "orders.customer_id = customers.id",
-    ("customers", "orders"): "customers.id = orders.customer_id"
+    ("customers", "orders"): "customers.id = orders.customer_id",
 }
 
-ALLOWED_OPERATORS = {
-    "equals": "=",
-    "greater_than": ">",
-    "less_than": "<",
-    "contains": "ILIKE"
-}
+ALLOWED_OPERATORS = {"equals": "=", "greater_than": ">", "less_than": "<", "contains": "ILIKE"}
 
-ALLOWED_AGGREGATIONS = {
-    "count": "COUNT",
-    "sum": "SUM",
-    "avg": "AVG"
-}
+ALLOWED_AGGREGATIONS = {"count": "COUNT", "sum": "SUM", "avg": "AVG"}
 
 
-def build_secure_query(blueprint: Dict[str, Any], tenant_id: str) -> Tuple[str, List[Any]]:
+def build_secure_query(blueprint: dict[str, Any], tenant_id: str) -> tuple[str, list[Any]]:
     primary_table = blueprint.get("target_table")
     if primary_table not in ALLOWED_SCHEMA:
         raise ValueError(f"Unauthorized or invalid target table: '{primary_table}'")
@@ -55,11 +46,17 @@ def build_secure_query(blueprint: Dict[str, Any], tenant_id: str) -> Tuple[str, 
         else:
             resolved_agg_col = resolve_table_context(agg_column)
             if not resolved_agg_col:
-                raise ValueError(f"Invalid column '{agg_column}' provided for aggregation '{agg_type}'.")
-            select_clause = f"{sql_func}({resolved_agg_col}) AS {agg_type}_{agg_column.replace('.', '_')}"
+                raise ValueError(
+                    f"Invalid column '{agg_column}' provided for aggregation '{agg_type}'."
+                )
+            select_clause = (
+                f"{sql_func}({resolved_agg_col}) AS {agg_type}_{agg_column.replace('.', '_')}"
+            )
     else:
         projection_input = blueprint.get("projection_columns", [])
-        safe_projections = [resolve_table_context(item) for item in projection_input if resolve_table_context(item)]
+        safe_projections = [
+            resolve_table_context(item) for item in projection_input if resolve_table_context(item)
+        ]
         select_clause = ", ".join(safe_projections) if safe_projections else f"{primary_table}.*"
 
     filter_clauses = []
@@ -87,13 +84,21 @@ def build_secure_query(blueprint: Dict[str, Any], tenant_id: str) -> Tuple[str, 
     for secondary_table in tables_to_join:
         relation_key = (primary_table, secondary_table)
         if relation_key in RELATIONSHIP_GRAPH:
-            join_clauses.append(f"INNER JOIN {secondary_table} ON {RELATIONSHIP_GRAPH[relation_key]}")
+            join_clauses.append(
+                f"INNER JOIN {secondary_table} ON {RELATIONSHIP_GRAPH[relation_key]}"
+            )
         else:
-            raise ValueError(f"No safe relational link established between '{primary_table}' and '{secondary_table}'.")
+            raise ValueError(
+                f"No safe relational link established between "
+                f"'{primary_table}' and '{secondary_table}'."
+            )
 
     from_segment = f"FROM {primary_table} " + " ".join(join_clauses)
 
-    sql = f"SELECT {select_clause} {from_segment.strip()} WHERE {primary_table}.tenant_id = %s " + " ".join(filter_clauses)
+    sql = (
+        f"SELECT {select_clause} {from_segment.strip()} WHERE {primary_table}.tenant_id = %s "
+        + " ".join(filter_clauses)
+    )
     params.insert(0, tenant_id)
 
     for secondary_table in tables_to_join:
@@ -114,7 +119,7 @@ def build_secure_query(blueprint: Dict[str, Any], tenant_id: str) -> Tuple[str, 
             limit = min(int(pagination.get("limit", 20)), 100)
             offset = max(int(pagination.get("offset", 0)), 0)
             sql += f" LIMIT {limit} OFFSET {offset}"
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             sql += " LIMIT 20 OFFSET 0"
 
     return " ".join(sql.split()) + ";", params
