@@ -41,9 +41,14 @@ filterwarnings = [
     "ignore::UserWarning",
 ]
 
+[tool.playwright]
+browser = "chromium"
+
 [dependency-groups]
 dev = [
     "httpx>=0.28.1",
+    "playwright>=1.61.0",
     "pytest>=9.1.1",
     "pytest-mock>=3.15.1",
+    "pytest-playwright>=0.8.0",
 ]
