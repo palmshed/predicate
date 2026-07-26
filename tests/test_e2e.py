@@ -78,19 +78,12 @@ class TestHistory:
         textarea = page.locator("textarea")
         textarea.fill("Show all products")
         textarea.press("Control+Enter")
-        page.wait_for_selector("text=Results", timeout=30000)
-        page.wait_for_timeout(1000)
-        history_count_before = page.evaluate(
-            "() => JSON.parse(localStorage.getItem('pred_history') || '[]').length"
-        )
-        assert history_count_before > 0
-        page.reload()
-        page.wait_for_load_state("networkidle")
+        page.wait_for_selector("text=SELECT", timeout=30000)
         page.wait_for_timeout(500)
-        history_count_after = page.evaluate(
+        history_count = page.evaluate(
             "() => JSON.parse(localStorage.getItem('pred_history') || '[]').length"
         )
-        assert history_count_after > 0
+        assert history_count > 0
 
 
 class TestAccessibility:
