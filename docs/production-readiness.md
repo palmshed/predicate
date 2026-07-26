@@ -6,17 +6,20 @@
 
 - [ ] Rotate `OPENROUTER_API_KEY` or `OPENAI_API_KEY` from defaults
 - [ ] Set `REQUIRE_AUTH=true` in production environment
+- [ ] Set a strong `CSRF_SECRET_KEY` (generate with `python -c "import secrets; print(secrets.token_hex(32))"`)
 - [ ] Enable SSL/TLS termination at load balancer
 - [ ] Review and update `MOCK_TENANT_REGISTRY` with production API keys
 - [ ] Set strong PostgreSQL password (not `securepassword123`)
 - [ ] Enable Redis authentication
 - [ ] Configure firewall rules (only ports 80/443 open)
+- [ ] Verify `ALLOWED_ORIGINS` matches your production domain
 
 ### Environment Variables
 
 ```bash
 # Required
-DATABASE_URL=postgresql://user:password@host:5432/predicate_db
+DATABASE_URL=postgresql://predicate_writer:password@host:5432/predicate_db
+DATABASE_READONLY_URL=postgresql://predicate_reader:password@host:5432/predicate_db
 REDIS_URL=redis://:password@host:6379/0
 
 # LLM Provider (configure the one matching LLM_PROVIDER)
@@ -28,8 +31,16 @@ OPENROUTER_API_KEY=sk-or-v1-...
 # LLM_MODEL=gpt-4o-mini
 # OPENAI_API_KEY=sk-...
 
-# Production settings
+# Security
 REQUIRE_AUTH=true
+CSRF_SECRET_KEY=<random-64-char-hex>
+MAX_PROMPT_LENGTH=2000
+QUERY_TIMEOUT_SECONDS=30
+ALLOWED_ORIGINS=https://yourdomain.com
+
+# Observability
+LOG_LEVEL=INFO
+LOG_FORMAT=json
 ```
 
 ### Database
@@ -172,12 +183,18 @@ docker-compose -f docker-compose.prod.yml restart
 - [ ] No secrets in git history
 - [ ] `.env` files in `.gitignore`
 - [ ] API keys rotated regularly
+- [ ] `CSRF_SECRET_KEY` set and unique per environment
+- [ ] `REQUIRE_AUTH=true` in production
 - [ ] Database connections encrypted (SSL)
 - [ ] Redis connections encrypted (SSL)
+- [ ] Read-only DB role (`predicate_reader`) used for queries
 - [ ] Audit logs retained for compliance period
 - [ ] Rate limits enforced per tenant
-- [ ] Input validation on all endpoints
+- [ ] Input validation on all endpoints (MAX_PROMPT_LENGTH enforced)
+- [ ] Query timeouts configured (QUERY_TIMEOUT_SECONDS)
 - [ ] SQL injection prevented (parameterized queries only)
+- [ ] Security headers present (X-Frame-Options, HSTS, CSP, nosniff)
+- [ ] CORS locked to production domain (ALLOWED_ORIGINS)
 - [ ] XSS prevention (Content-Type headers)
 
 ---
@@ -204,10 +221,11 @@ psql -U postgres predicate_db < backup_20260726.sql
 
 ## Go-Live Sign-off
 
-- [ ] All tests passing: `pytest -v`
+- [ ] All tests passing: `pytest -v` (37/37)
 - [ ] CI pipeline green
-- [ ] Load testing completed
-- [ ] Security audit completed
-- [ ] Documentation updated
+- [ ] Benchmark suite passing: `python benchmark.py`
+- [ ] Security audit completed (see docs/threat-model.md)
+- [ ] Documentation updated (README, CHANGELOG, docs/)
+- [ ] Load testing completed (phase 3 of benchmark suite)
 - [ ] Runbook created
 - [ ] On-call rotation scheduled

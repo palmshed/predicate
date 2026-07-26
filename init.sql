@@ -53,8 +53,28 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     compiled_sql TEXT NOT NULL,
     execution_parameters TEXT NOT NULL,
     cache_hit BOOLEAN NOT NULL,
+    request_id VARCHAR(36),
+    compile_ms FLOAT,
+    validate_ms FLOAT,
+    execute_ms FLOAT,
+    rows_returned INT,
+    target_table VARCHAR(100),
+    error_code VARCHAR(50),
     executed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant ON audit_logs(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_executed_at ON audit_logs(executed_at);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'predicate_reader') THEN
+        CREATE ROLE predicate_reader LOGIN PASSWORD 'password';
+    END IF;
+END
+$$;
+
+GRANT CONNECT ON DATABASE predicate_db TO predicate_reader;
+GRANT USAGE ON SCHEMA public TO predicate_reader;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO predicate_reader;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO predicate_reader;

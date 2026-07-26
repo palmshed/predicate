@@ -10,14 +10,18 @@
 </p>
 
 <p align="center">
-A backend system that translates natural language questions into database queries through an intermediate schema, preventing raw SQL generation and direct database access by language models.
+Secure natural language to SQL compilation with a built-in workspace.
 </p>
 
 ---
 
-## Architecture
+## How It Works
 
-The system separates semantic parsing from database execution, allowing language models to reason only about a controlled schema while the backend remains responsible for query generation, authorization, caching, and auditing.
+```
+User Text → AI Agent (Pydantic) → JSON Blueprint → SQL Compiler → Cache/DB → Results
+```
+
+The LLM never touches raw SQL. It produces a structured JSON blueprint containing `target_table`, `projection_columns`, `filters`, `sorting`, `pagination`, and `aggregation`. The SQL compiler converts these blueprints to parameterized queries with `%s` placeholders. `tenant_id` is injected server-side from validated API keys -- never from user input. `ALLOWED_SCHEMA`, `RELATIONSHIP_GRAPH`, and `ALLOWED_AGGREGATIONS` in `sql_builder.py` whitelist all tables, columns, JOINs, and aggregations.
 
 ### Request Execution Path
 
@@ -48,38 +52,29 @@ sequenceDiagram
     Database Core->>Client Workspace: Isolated Record Dict Array Response
 ```
 
-1. **Authentication & Rate Limiting:** Validates API tokens and enforces request limits using atomic Redis counters.
-2. **Semantic Parser:** Converts natural language into a strict Pydantic blueprint using configurable LLM providers (OpenAI, OpenRouter).
-3. **Query Compiler:** Produces parameterized SQL while automatically applying joins and tenant filters.
-4. **Cache Layer:** Uses SHA-256 query signatures to serve cached results from Redis before querying PostgreSQL.
-5. **Audit Pipeline:** Persists prompts, compiled SQL, and parameters for compliance and traceability.
-6. **Background Workers:** Processes long-running CSV exports asynchronously through Celery and Redis.
-
 ---
 
-## Performance & Benchmarks
+## Features
 
-The SQL compiler operates with sub-microsecond overhead and no shared-state lock contention. Benchmarks were executed on an Apple M1 (4 Performance + 4 Efficiency cores).
+### Frontend Workspace
 
-| Workers | Aggregate Throughput | p50 Latency | p99 Latency | Efficiency |
-| :------ | -------------------: | ----------: | ----------: | ---------: |
-| **1 Process** | 174,000 q/s | 3.6 μs | 4.5 μs | 100% |
-| **2 Processes** | 345,000 q/s | 3.6 μs | 4.8 μs | **99.2%** |
-| **4 Processes** | **641,000 q/s** | 3.6 μs | 11.0 μs | **92.0%** |
-| **8 Processes** | 778,000 q/s | 3.7 μs | 13.4 μs | 55.9% |
+React IDE-style UI with a command palette (Ctrl+K / Cmd+K), query history persisted in localStorage, a keyboard-navigable schema explorer tree, and a virtual results table with sort, filter, column resize, and inline edit. Keyboard shortcuts for copy SQL (C), export CSV (E), cycle theme (T), and shortcuts help (?).
 
-Highlights:
+### Security
 
-- **SHA-256 Signature Overhead:** ~1 μs per query.
-- **Near Linear Scaling:** ~99% efficiency across isolated CPU cores.
-- **Stable Latency:** p50 remains at approximately 3.6 μs regardless of worker count.
-- **Cloud Projection:** Estimated throughput exceeds **2 million queries per second** on modern 32-core cloud instances.
+Secure headers (X-Frame-Options DENY, nosniff, HSTS, CSP, Referrer-Policy, Permissions-Policy), CSRF protection via signed cookie + header match, input validation (MAX_PROMPT_LENGTH), query timeouts, and a read-only database role (`predicate_reader`).
 
-To reproduce:
+### Observability
 
-```bash
-./venv/bin/python benchmark.py
-```
+Structured JSON logging, X-Request-ID correlation, TraceContext spans across compile, validate, cache, and execute stages, Prometheus metrics at `/metrics`, per-provider metrics, and health (`/health`) and readiness (`/ready`) endpoints.
+
+### Multi-Tenant
+
+3-tier rate limiting (sandbox 60, growth 20, enterprise 100 RPM), isolated `tenant_id` per API key, and audit logs with `request_id`, timing, `target_table`, and `error_code`.
+
+### Async Export
+
+Celery workers for long-running CSV exports with progress states.
 
 ---
 
@@ -92,62 +87,71 @@ To reproduce:
 - Redis 7+ (or Docker)
 - LLM API key (OpenRouter free tier or OpenAI)
 
-### Local Setup (no Docker)
-
-```bash
-# Install dependencies
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Start services (Homebrew)
-brew services start postgresql
-brew services start redis
-
-# Create database and seed
-createdb predicate_db
-psql predicate_db < init.sql
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your LLM API key
-
-# Run
-uvicorn app.main:app --reload
-```
-
-### Docker Setup
+### Quick Start (Docker)
 
 ```bash
 cp .env.example .env
-
-# Configure your LLM API key (OpenRouter free or OpenAI).
-# Enable REQUIRE_AUTH=true when testing authenticated deployments.
-
+# Edit .env -- set your LLM API key
 docker-compose up --build
 ```
-
-After startup:
 
 - Workspace: `http://localhost:8000`
 - Swagger UI: `http://localhost:8000/docs`
 - Health Check: `http://localhost:8000/health`
 
+### Local Setup
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+brew services start postgresql
+brew services start redis
+
+createdb predicate_db
+psql predicate_db < init.sql
+
+cp .env.example .env
+# Edit .env
+
+uvicorn app.main:app --reload
+```
+
+---
+
+## Configuration
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `LLM_PROVIDER` | LLM backend (`openai` or `openrouter`) | `openrouter` |
+| `LLM_MODEL` | Model identifier | `nvidia/nemotron-3-super-120b-a12b:free` |
+| `REQUIRE_AUTH` | Enable API key authentication | `false` |
+| `DATABASE_URL` | Primary PostgreSQL connection string | -- |
+| `DATABASE_READONLY_URL` | Read-only PostgreSQL connection string | -- |
+| `REDIS_URL` | Redis connection string | -- |
+| `MAX_PROMPT_LENGTH` | Maximum characters per prompt | `2000` |
+| `QUERY_TIMEOUT_SECONDS` | Per-query execution timeout | `30` |
+| `CSRF_SECRET_KEY` | Secret for CSRF cookie signing | -- |
+| `ALLOWED_ORIGINS` | Comma-separated CORS origins | -- |
+| `LOG_LEVEL` | Logging level | `INFO` |
+| `LOG_FORMAT` | Log output format (`json` or `text`) | `json` |
+
 ---
 
 ## API
 
-### Compile & Execute Query
+### Compile and Execute Query
 
 **POST** `/api/v1/query/compile`
 
-Header
+Header:
 
 ```text
 X-Predicate-API-Key: <your_key>
 ```
 
-Request
+Request:
 
 ```json
 {
@@ -155,50 +159,147 @@ Request
 }
 ```
 
-Response
+Response:
 
-Returns:
-
-- Parameterized SQL
-- Query parameters
-- Result rows
-- `cache_hit` status
-
----
+```json
+{
+  "sql": "SELECT o.id, c.name FROM orders o JOIN customers c ON o.customer_id = c.id WHERE c.is_active = %s AND c.country = %s",
+  "parameters": [true, "Germany"],
+  "rows": [
+    {"id": 1001, "name": "Hans Mueller"},
+    {"id": 1002, "name": "Anna Schmidt"}
+  ],
+  "cache_hit": false,
+  "tenant_id": "acme",
+  "request_id": "req_a1b2c3d4"
+}
+```
 
 ### Tenant Metrics
 
 **GET** `/api/v1/metrics`
 
-Returns:
+Returns total requests, cache hits, database misses, and requests per minute for the authenticated tenant.
 
-- Total requests
-- Cache hits
-- Database misses
-- Requests per minute
-
----
-
-### Asynchronous CSV Export
+### Async CSV Export
 
 **POST** `/api/v1/export/async`
 
-Returns:
+Returns a `task_id` and `poll_url` for tracking progress.
 
-- `task_id`
-- `poll_url`
+### Export Status
 
-Status endpoint:
+**GET** `/api/v1/export/status/{task_id}`
 
-```text
-GET /api/v1/export/status/{task_id}
+Returns the current state: `PROCESSING`, `SUCCESS`, or `FAILURE`.
+
+### Health Check
+
+**GET** `/health`
+
+Returns `version`, `git_commit`, `build_date`, `uptime`, `memory`, `pid`, and `llm_provider`.
+
+### Readiness Probe
+
+**GET** `/ready`
+
+Returns 200 when all dependencies are reachable.
+
+### Prometheus Metrics
+
+**GET** `/metrics`
+
+Returns metrics in Prometheus exposition format.
+
+---
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+| :--- | :--- |
+| Ctrl+K / Cmd+K | Command palette |
+| Ctrl+Enter / Cmd+Enter | Run query |
+| Ctrl+L / Cmd+L | Focus input |
+| C | Copy SQL (when results visible) |
+| E | Export CSV (when results visible) |
+| T | Cycle theme (Light, Dim, Dark) |
+| ? | Show shortcuts |
+| Escape | Close palette / modal |
+
+---
+
+## Security
+
+- All SQL is parameterized -- the AI never touches raw SQL.
+- `tenant_id` is injected server-side and cannot be forged from client input.
+- Query execution runs under a read-only database role (`predicate_reader`).
+- CSRF, CSP, HSTS, and secure headers are applied on every response.
+- Input validation is enforced on all endpoints.
+- Query timeouts prevent runaway queries from exhausting resources.
+- Rate limiting is enforced per tenant.
+- See `docs/threat-model.md` for the full threat analysis.
+
+---
+
+## Architecture
+
+```
+predicate/
+├── app/
+│   ├── agent/          # LLM integration, prompt templates, QueryBlueprint
+│   ├── auth/           # API key validation, rate limiting
+│   ├── compiler/       # SQL builder with schema whitelist
+│   ├── database/       # Connection pools, cache, metrics, audit
+│   ├── middleware/      # Security headers, CSRF, request ID
+│   ├── observability/  # Logging, tracing, metrics
+│   ├── static/         # Frontend workspace (React)
+│   ├── main.py         # FastAPI application
+│   └── worker.py       # Celery background tasks
+├── alembic/            # Database migrations
+├── deploy/nginx/       # Nginx configuration
+├── docs/               # Documentation
+├── tests/              # 37 tests
+├── benchmark.py        # Performance benchmark suite
+└── init.sql            # Database schema
 ```
 
-Possible states:
+---
 
-- `PROCESSING`
-- `SUCCESS`
-- `FAILURE`
+## Benchmarks
+
+The SQL compiler operates with sub-microsecond overhead and no shared-state lock contention. Benchmarks were executed on an Apple M1 (4 Performance + 4 Efficiency cores).
+
+| Workers | Aggregate Throughput | p50 Latency | p99 Latency | Efficiency |
+| :--- | ---: | ---: | ---: | ---: |
+| **1 Process** | 174,000 q/s | 3.6 us | 4.5 us | 100% |
+| **2 Processes** | 345,000 q/s | 3.6 us | 4.8 us | 99.2% |
+| **4 Processes** | 641,000 q/s | 3.6 us | 11.0 us | 92.0% |
+| **8 Processes** | 778,000 q/s | 3.7 us | 13.4 us | 55.9% |
+
+Pipeline load test: 82 req/s single-thread, 802 req/s 10-thread, p50=10us.
+
+Compiler throughput remains sub-microsecond at all schema scales from 10 to 500 tables. Failure injection: 13/13 tests pass.
+
+To reproduce:
+
+```bash
+python benchmark.py                    # all phases
+python benchmark.py --phase 1          # compiler only
+python benchmark.py --phase 3 --users 100 --duration 30
+```
+
+See `docs/benchmark-methodology.md` for details.
+
+---
+
+## Testing
+
+```bash
+source venv/bin/activate
+pytest -v
+```
+
+37 tests across 5 files: compiler, API, security, aggregations, and integration.
 
 ---
 
@@ -227,25 +328,12 @@ alembic history
 
 ### Migration Files
 
-- `001_initial` - Creates customers, orders, products, audit_logs tables
-- `002_seed` - Inserts sample data
+- `001_initial` -- Creates customers, orders, products, audit_logs tables
+- `002_seed` -- Inserts sample data
 
 ### Important Notes
 
 Since Predicate uses psycopg2 directly (not SQLAlchemy ORM), migrations must be written manually. The `autogenerate` command will create a stub that you fill with SQL operations.
-
----
-
-## Hero Image
-
-The README hero is code-generated SVG. To update badges or text:
-
-```bash
-# Edit hero/badges.js, then:
-node hero/build.js
-```
-
-Badge definitions live in `hero/badges.js`. The build script outputs `.github/website/hero.svg`.
 
 ---
 
@@ -266,49 +354,19 @@ The remaining pipeline, including authentication, caching, routing, auditing, me
 
 ---
 
-## Testing
+## Hero Image
 
-Run the complete test suite:
+The README hero is code-generated SVG. To update badges or text:
 
 ```bash
-source venv/bin/activate
-pytest -v
+# Edit hero/badges.js, then:
+node hero/build.js
 ```
+
+Badge definitions live in `hero/badges.js`. The build script outputs `.github/website/hero.svg`.
 
 ---
 
-## Project Structure
+## License
 
-```text
-predicate/
-├── .github/
-│   └── workflows/
-│       └── ci.yml
-├── alembic/
-│   ├── versions/
-│   │   ├── 2026_07_26_0000-001_initial_initial_schema.py
-│   │   └── 2026_07_26_0001-002_seed_seed_initial_data.py
-│   ├── env.py
-│   └── script.py.mako
-├── app/
-│   ├── agent/
-│   ├── auth/
-│   ├── compiler/
-│   ├── database/
-│   ├── static/
-│   ├── main.py
-│   └── worker.py
-├── deploy/
-├── docs/
-├── tests/
-├── alembic.ini
-├── benchmark.py
-├── docker-compose.yml
-├── docker-compose.prod.yml
-├── Dockerfile
-├── init.sql
-├── LICENSE
-├── README.md
-├── requirements.txt
-└── pytest.ini
-```
+MIT License. See [LICENSE](LICENSE) for details.
