@@ -176,6 +176,40 @@ Possible states:
 
 ---
 
+## Database Migrations
+
+Alembic manages schema versioning. Migrations live in `alembic/versions/`.
+
+### Commands
+
+```bash
+# Apply all pending migrations
+alembic upgrade head
+
+# Roll back one revision
+alembic downgrade -1
+
+# Generate a new migration (requires manual SQL in offline mode)
+alembic revision --autogenerate -m "description"
+
+# View current revision
+alembic current
+
+# History of migrations
+alembic history
+```
+
+### Migration Files
+
+- `001_initial` - Creates customers, orders, products, audit_logs tables
+- `002_seed` - Inserts sample data
+
+### Important Notes
+
+Since Predicate uses psycopg2 directly (not SQLAlchemy ORM), migrations must be written manually. The `autogenerate` command will create a stub that you fill with SQL operations.
+
+---
+
 ## Reusing the Engine
 
 To support another database schema, update only:
@@ -211,6 +245,12 @@ predicate/
 ├── .github/
 │   └── workflows/
 │       └── ci.yml
+├── alembic/
+│   ├── versions/
+│   │   ├── 2026_07_26_0000-001_initial_initial_schema.py
+│   │   └── 2026_07_26_0001-002_seed_seed_initial_data.py
+│   ├── env.py
+│   └── script.py.mako
 ├── app/
 │   ├── agent/
 │   ├── auth/
@@ -222,6 +262,7 @@ predicate/
 ├── deploy/
 ├── docs/
 ├── tests/
+├── alembic.ini
 ├── benchmark.py
 ├── docker-compose.yml
 ├── docker-compose.prod.yml

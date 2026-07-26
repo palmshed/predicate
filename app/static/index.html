@@ -3,49 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Predicate Workspace</title>
-    <script src="https://tailwindcss.com"></script>
+    <title>Predicate</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #FAFAFA; color: #111827; height: 100vh; overflow: hidden; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+        textarea { font-family: 'Inter', sans-serif; }
+        pre, code { font-family: 'JetBrains Mono', monospace; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        .tab-content { animation: fadeIn 0.15s ease-out; }
+    </style>
 </head>
-<body class="bg-gray-900 text-gray-100 font-sans antialiased">
+<body>
     <div id="root"></div>
 
     <script type="text/babel">
-        function PredicateDashboard() {
+        function PredicateWorkspace() {
             const [prompt, setPrompt] = React.useState("");
             const [loading, setLoading] = React.useState(false);
             const [response, setResponse] = React.useState(null);
             const [apiKey, setApiKey] = React.useState("pred_live_7f8a9b2c3d4e5f6g7h8i9j0k");
             const [metrics, setMetrics] = React.useState(null);
-            
+            const [activeTab, setActiveTab] = React.useState("sql");
             const [exporting, setExporting] = React.useState(false);
             const [exportStatus, setExportStatus] = React.useState("");
             const [exportProgress, setExportProgress] = React.useState(0);
             const [downloadUrl, setDownloadUrl] = React.useState(null);
+            const [schemaOpen, setSchemaOpen] = React.useState(false);
+            const [expandedTable, setExpandedTable] = React.useState(null);
 
             const executeQuery = async (e) => {
                 e.preventDefault();
                 if (!prompt.trim()) return;
-
                 setLoading(true);
                 setResponse(null);
-
                 try {
                     const res = await fetch("/api/v1/query/compile", {
                         method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-Predicate-API-Key": apiKey
-                        },
+                        headers: { "Content-Type": "application/json", "X-Predicate-API-Key": apiKey },
                         body: JSON.stringify({ prompt })
                     });
                     const data = await res.json();
                     setResponse(data);
                     fetchMetrics();
                 } catch (err) {
-                    setResponse({ error: "Communication failure with compilation engine." });
+                    setResponse({ error: "Engine unreachable." });
                 } finally {
                     setLoading(false);
                 }
@@ -53,29 +64,19 @@
 
             const executeExport = async () => {
                 if (!prompt.trim()) return;
-                
                 setExporting(true);
                 setDownloadUrl(null);
                 setExportStatus("QUEUED");
                 setExportProgress(0);
-
                 try {
                     const res = await fetch("/api/v1/export/async", {
                         method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-Predicate-API-Key": apiKey
-                        },
+                        headers: { "Content-Type": "application/json", "X-Predicate-API-Key": apiKey },
                         body: JSON.stringify({ prompt })
                     });
                     const data = await res.json();
-                    
-                    if (data.task_id) {
-                        pollExportStatus(data.task_id);
-                    } else {
-                        setExportStatus("FAILED");
-                        setExporting(false);
-                    }
+                    if (data.task_id) pollExportStatus(data.task_id);
+                    else { setExportStatus("FAILED"); setExporting(false); }
                 } catch (err) {
                     setExportStatus("FAILED");
                     setExporting(false);
@@ -89,19 +90,13 @@
                             headers: { "X-Predicate-API-Key": apiKey }
                         });
                         const data = await res.json();
-                        
                         setExportStatus(data.state);
-
                         if (data.state === "PROCESSING" && data.meta) {
                             setExportProgress(data.meta.progress || 10);
                         } else if (data.state === "SUCCESS") {
                             clearInterval(interval);
-                            
-                            const csvContent = data.result.csv_payload;
-                            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-                            const url = URL.createObjectURL(blob);
-                            
-                            setDownloadUrl(url);
+                            const blob = new Blob([data.result.csv_payload], { type: "text/csv;charset=utf-8;" });
+                            setDownloadUrl(URL.createObjectURL(blob));
                             setExporting(false);
                             fetchMetrics();
                         } else if (data.state === "FAILURE") {
@@ -118,176 +113,278 @@
 
             const fetchMetrics = async () => {
                 try {
-                    const res = await fetch("/api/v1/metrics", {
-                        headers: { "X-Predicate-API-Key": apiKey }
-                    });
+                    const res = await fetch("/api/v1/metrics", { headers: { "X-Predicate-API-Key": apiKey } });
                     const data = await res.json();
                     if (!data.error) setMetrics(data);
-                } catch (err) {
-                    console.error("Failed to retrieve pipeline performance metrics.");
-                }
+                } catch (err) {}
             };
 
-            React.useEffect(() => {
-                fetchMetrics();
-            }, []);
+            React.useEffect(() => { fetchMetrics(); }, []);
+
+            const totalQueries = metrics?.historical_aggregates?.total_queries_processed || 0;
+            const cacheHits = metrics?.historical_aggregates?.cached_responses_served || 0;
+            const efficiency = metrics?.historical_aggregates?.infrastructure_efficiency_score || "-";
+
+            const tabs = ["SQL", "Results", "Metrics", "Cache", "Audit"];
+
+            const tables = {
+                customers: ["id", "name", "email", "country", "status"],
+                orders: ["id", "customer_id", "total_amount", "order_status"],
+                products: ["id", "product_name", "price", "category"]
+            };
 
             return (
-                <div className="min-h-screen flex flex-col max-w-6xl mx-auto p-6 space-y-6">
-                    <header className="border-b border-gray-800 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div>
-                            <h1 className="text-lg font-mono font-bold tracking-wider text-gray-200">PREDICATE // CONSOLE</h1>
-                            <p className="text-xs text-gray-500">Semantic Parsing & Query Isolation Workspace</p>
+                <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+                    <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", height: "48px", borderBottom: "1px solid #E5E7EB", background: "#FFFFFF", flexShrink: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#24d455" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h2l1-1 1 1h4"/>
+                                <path d="M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-3l-1-1-1 1h-3"/>
+                                <path d="M5.89 9.71c-2.15 2.15-2.3 5.47-.35 7.43l4.24-4.25.7-.7.71-.71 2.12-2.12c-1.95-1.96-5.27-1.8-7.42.35"/>
+                                <path d="M11 15.5c.5 2.5-.17 4.5-1 6.5h4c2-5.5-.5-12-1-14"/>
+                            </svg>
+                            <span style={{ fontSize: "13px", fontWeight: 600, color: "#111827" }}>Predicate</span>
                         </div>
-                        <div className="w-full sm:w-auto">
-                            <input 
-                                type="password" 
-                                value={apiKey}
-                                onChange={(e) => setApiKey(e.target.value)}
-                                placeholder="X-Predicate-API-Key"
-                                className="w-full sm:w-64 bg-gray-950 border border-gray-800 rounded px-3 py-1.5 text-xs font-mono text-gray-400 focus:outline-none focus:border-gray-700"
-                            />
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                            <div
+                                style={{ display: "flex", alignItems: "center", gap: "5px", padding: "3px 8px", fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", color: "#24d455", background: "#F0FDF4", border: "1px solid #DCFCE7", borderRadius: "20px", cursor: "default" }}
+                                title={apiKey}
+                            >
+                                <span style={{ width: "4px", height: "4px", background: "#24d455", borderRadius: "50%" }} />
+                                Authenticated
+                            </div>
                         </div>
                     </header>
 
-                    {metrics && (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-950 rounded border border-gray-800 font-mono text-xs">
-                            <div>
-                                <span className="text-gray-500 block">RPM Window Count</span>
-                                <span className="text-gray-300 font-bold">{metrics.current_minute_usage?.requests_per_minute} / {metrics.current_minute_usage?.tier_limit_ceiling}</span>
+                    <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+                        <div style={{ width: "260px", minWidth: "220px", display: "flex", flexDirection: "column", borderRight: "1px solid #F1F5F9", background: "#FFFFFF" }}>
+                            <div style={{ padding: "16px 20px", borderBottom: "1px solid #F3F4F6", flex: 1, display: "flex", flexDirection: "column" }}>
+                                <div style={{ fontSize: "11px", fontWeight: 500, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "4px" }}>Prompt</div>
+                                <div style={{ fontSize: "11px", color: "#D1D5DB", marginBottom: "18px" }}>Describe the data to retrieve.</div>
+                                <form onSubmit={executeQuery} style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1 }}>
+                                    <textarea
+                                        value={prompt}
+                                        onChange={(e) => setPrompt(e.target.value)}
+                                        placeholder="Show me orders over $500 from active customers..."
+                                        rows={4}
+                                        style={{ width: "100%", padding: "10px 12px", fontSize: "13px", lineHeight: "1.5", border: "1px solid #E5E7EB", borderRadius: "6px", background: "#FAFAFA", color: "#111827", outline: "none", resize: "none" }}
+                                    />
+                                    <div style={{ display: "flex", gap: "8px" }}>
+                                        <button
+                                            type="submit"
+                                            disabled={loading || exporting}
+                                            style={{ flex: 1, padding: "8px 16px", fontSize: "12px", fontWeight: 500, background: "#111827", color: "#FFFFFF", border: "none", borderRadius: "6px", cursor: loading ? "wait" : "pointer", opacity: loading ? 0.6 : 1, transition: "opacity 0.15s" }}
+                                        >
+                                            {loading ? "Compiling..." : "Run Query"}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={executeExport}
+                                            disabled={loading || exporting || !prompt.trim()}
+                                            style={{ padding: "8px 16px", fontSize: "12px", fontWeight: 500, background: "#FFFFFF", color: "#6B7280", border: "1px solid #E5E7EB", borderRadius: "6px", cursor: exporting ? "wait" : "pointer", opacity: (!prompt.trim() || exporting) ? 0.5 : 1 }}
+                                        >
+                                            {exporting ? `${exportProgress}%` : "Export"}
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
-                            <div>
-                                <span className="text-gray-500 block">Total Queries Run</span>
-                                <span className="text-gray-300 font-bold">{metrics.historical_aggregates?.total_queries_processed}</span>
-                            </div>
-                            <div>
-                                <span className="text-gray-500 block">Memory Cache Hits</span>
-                                <span className="text-green-500 font-bold">{metrics.historical_aggregates?.cached_responses_served}</span>
-                            </div>
-                            <div>
-                                <span className="text-gray-500 block">Optimization Score</span>
-                                <span className="text-blue-400 font-bold">{metrics.historical_aggregates?.infrastructure_efficiency_score}</span>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-                        <div className="flex flex-col bg-gray-950 p-5 rounded border border-gray-800 space-y-4">
-                            <div className="text-xs font-mono uppercase tracking-wider text-gray-500">Natural Language Entry</div>
-                            <form onSubmit={executeQuery} className="flex-1 flex flex-col space-y-4">
-                                <textarea
-                                    value={prompt}
-                                    onChange={(e) => setPrompt(e.target.value)}
-                                    placeholder="Ask a question against your whitelisted data layout... (e.g., 'Show me orders from customers in India')"
-                                    className="w-full flex-1 min-h-[200px] bg-gray-900 border border-gray-800 rounded p-4 text-xs font-mono focus:outline-none focus:border-gray-700 resize-none text-gray-300 placeholder-gray-600"
-                                ></textarea>
-                                
-                                <div className="flex gap-4">
-                                    <button
-                                        type="submit"
-                                        disabled={loading || exporting}
-                                        className="flex-1 bg-gray-200 hover:bg-white text-gray-900 text-xs font-mono font-bold py-2.5 px-4 rounded transition disabled:opacity-40"
-                                    >
-                                        {loading ? "COMPILING..." : "RUN_QUERY_PIPELINE"}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={executeExport}
-                                        disabled={loading || exporting || !prompt.trim()}
-                                        className="bg-gray-900 hover:bg-gray-800 text-gray-300 text-xs font-mono font-bold py-2.5 px-4 rounded border border-gray-800 transition disabled:opacity-40"
-                                    >
-                                        {exporting ? `EXPORTING (${exportProgress}%)` : "EXPORT_CSV"}
-                                    </button>
-                                </div>
-                            </form>
 
                             {exporting && (
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-xs font-mono text-gray-500">
-                                        <span>Task Worker Pipeline State:</span>
+                                <div style={{ padding: "10px 20px", borderBottom: "1px solid #F3F4F6" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#9CA3AF", marginBottom: "6px", fontFamily: "'JetBrains Mono', monospace" }}>
+                                        <span>Export</span>
                                         <span>{exportStatus}</span>
                                     </div>
-                                    <div className="w-full bg-gray-800 rounded h-2">
-                                        <div 
-                                            className="bg-blue-500 h-2 rounded transition-all duration-300" 
-                                            style={{ width: `${exportProgress}%` }}
-                                        ></div>
+                                    <div style={{ height: "3px", background: "#F3F4F6", borderRadius: "2px", overflow: "hidden" }}>
+                                        <div style={{ height: "100%", background: "#24d455", borderRadius: "2px", width: `${exportProgress}%`, transition: "width 0.3s" }} />
                                     </div>
                                 </div>
                             )}
 
                             {downloadUrl && (
-                                <div className="flex items-center justify-between bg-green-950 p-3 rounded border border-green-800">
-                                    <span className="text-xs font-mono text-green-400">CSV Export Generated Successfully.</span>
-                                    <a
-                                        href={downloadUrl}
-                                        download="predicate_export.csv"
-                                        className="text-xs font-mono font-bold text-green-300 hover:text-green-200 underline"
-                                    >
-                                        DOWNLOAD_FILE
-                                    </a>
+                                <div style={{ padding: "10px 20px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                    <span style={{ fontSize: "12px", color: "#24d455" }}>CSV ready</span>
+                                    <a href={downloadUrl} download="predicate_export.csv" style={{ fontSize: "12px", fontWeight: 500, color: "#111827", textDecoration: "underline" }}>Download</a>
                                 </div>
                             )}
+
+                            <div style={{ padding: "14px 20px", borderTop: "1px solid #F3F4F6" }}>
+                                <button
+                                    onClick={() => setSchemaOpen(!schemaOpen)}
+                                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100px", padding: "6px 12px", fontSize: "11px", fontWeight: 500, color: "#6B7280", background: "#FAFAFA", border: "1px solid #E5E7EB", borderRadius: "6px", cursor: "pointer" }}
+                                >
+                                    <span>Schema</span>
+                                    <span style={{ fontSize: "10px", color: "#9CA3AF" }}>{schemaOpen ? "^" : "v"}</span>
+                                </button>
+                                {schemaOpen && (
+                                    <div style={{ marginTop: "10px" }}>
+                                        {Object.entries(tables).map(([name, cols]) => (
+                                            <div key={name} style={{ marginBottom: "2px" }}>
+                                                <button
+                                                    onClick={() => setExpandedTable(expandedTable === name ? null : name)}
+                                                    style={{ display: "flex", alignItems: "center", gap: "6px", padding: "3px 0", fontSize: "12px", fontWeight: 500, color: "#111827", background: "none", border: "none", cursor: "pointer", width: "100%", textAlign: "left" }}
+                                                >
+                                                    <span style={{ fontSize: "8px", color: "#9CA3AF", width: "10px", transition: "transform 0.15s", transform: expandedTable === name ? "rotate(90deg)" : "rotate(0deg)" }}>&#9654;</span>
+                                                    {name}
+                                                </button>
+                                                {expandedTable === name && (
+                                                    <div style={{ paddingLeft: "16px", paddingBottom: "6px", fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "#9CA3AF", lineHeight: "1.8" }}>
+                                                        {cols.join(", ")}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        <div className="flex flex-col bg-gray-950 p-5 rounded border border-gray-800 space-y-4">
-                            <div className="text-xs font-mono uppercase tracking-wider text-gray-500">Pipeline Tracking Output</div>
-                            
-                            {!response && !loading && (
-                                <div className="flex-1 flex items-center justify-center border border-dashed border-gray-800 rounded text-xs font-mono text-gray-600">
-                                    Pipeline idle. Awaiting compilation execution.
-                                </div>
-                            )}
-
-                            {loading && (
-                                <div className="flex-1 flex items-center justify-center text-xs font-mono text-gray-500">
-                                    Invoking semantic structural parsing parameters...
-                                </div>
-                            )}
-
-                            {response && (
-                                <div className="flex-1 space-y-4 font-mono text-[11px] overflow-y-auto max-h-[350px]">
-                                    <div className="flex justify-between items-center bg-gray-900 p-2.5 rounded border border-gray-800">
-                                        <span className="text-gray-500">Execution Mode:</span>
-                                        <span className={response.cache_hit ? "text-green-400 font-bold" : "text-amber-500 font-bold"}>
-                                            {response.cache_hit ? "CACHE_REPLAY_HIT (<2ms)" : "DB_COMPUTATION_MISS"}
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#FAFAFA", overflow: "hidden" }}>
+                            <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid #E5E7EB", background: "#FFFFFF", flexShrink: 0 }}>
+                                {tabs.map((tab) => (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setActiveTab(tab)}
+                                        style={{
+                                            padding: "10px 20px", fontSize: "12px", fontWeight: 500, border: "none", borderBottom: activeTab === tab ? "2px solid #24d455" : "2px solid transparent", background: "transparent", cursor: "pointer",
+                                            color: activeTab === tab ? "#111827" : "#9CA3AF"
+                                        }}
+                                    >
+                                        {tab}
+                                    </button>
+                                ))}
+                                <div style={{ marginLeft: "auto", padding: "0 20px", display: "flex", alignItems: "center", gap: "12px" }}>
+                                    {response && (
+                                        <span style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: response.cache_hit ? "#24d455" : "#F59E0B" }}>
+                                            {response.cache_hit ? "cache hit" : "db miss"}
                                         </span>
-                                    </div>
-
-                                    <div>
-                                        <div className="text-gray-500 mb-1">COMPILED_SQL_STRUCTURE</div>
-                                        <pre className="bg-gray-900 p-3 rounded border border-gray-800 text-gray-300 whitespace-pre-wrap overflow-x-auto">{response.compiled_sql || JSON.stringify(response, null, 2)}</pre>
-                                    </div>
-
-                                    {response.parameters && (
-                                        <div>
-                                            <div className="text-gray-500 mb-1">INJECTED_PARAMETERS</div>
-                                            <pre className="bg-gray-900 p-2.5 rounded border border-gray-800 text-gray-400 overflow-x-auto">{JSON.stringify(response.parameters)}</pre>
-                                        </div>
-                                    )}
-
-                                    {response.results && (
-                                        <div>
-                                            <div className="text-gray-500 mb-1">RECORD_ROWS_RETURNED ({response.results.length})</div>
-                                            <pre className="bg-gray-900 p-3 rounded border border-gray-800 text-green-400 overflow-x-auto max-h-[200px] overflow-y-auto">{JSON.stringify(response.results, null, 2)}</pre>
-                                        </div>
-                                    )}
-
-                                    {response.error && (
-                                        <div className="bg-red-950 p-3 rounded border border-red-800 text-red-400">
-                                            {response.error}
-                                        </div>
                                     )}
                                 </div>
-                            )}
+                            </div>
+
+                            <div style={{ flex: 1, overflow: "auto", background: "#FFFFFF" }}>
+                                {!response && !loading && (
+                                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#D1D5DB", paddingBottom: "80px" }}>
+                                        <div style={{ textAlign: "center" }}>
+                                            <div style={{ fontSize: "36px", marginBottom: "12px", opacity: 0.3 }}>
+                                                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h2l1-1 1 1h4"/>
+                                                    <path d="M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-3l-1-1-1 1h-3"/>
+                                                    <path d="M5.89 9.71c-2.15 2.15-2.3 5.47-.35 7.43l4.24-4.25.7-.7.71-.71 2.12-2.12c-1.95-1.96-5.27-1.8-7.42.35"/>
+                                                    <path d="M11 15.5c.5 2.5-.17 4.5-1 6.5h4c2-5.5-.5-12-1-14"/>
+                                                </svg>
+                                            </div>
+                                            <div style={{ fontSize: "13px", fontWeight: 500, color: "#9CA3AF" }}>Ready</div>
+                                            <div style={{ fontSize: "12px", color: "#D1D5DB", marginTop: "4px" }}>Describe the data to retrieve.</div>
+                                            <div style={{ fontSize: "12px", color: "#D1D5DB" }}>SQL, results, metrics, and cache activity</div>
+                                            <div style={{ fontSize: "12px", color: "#D1D5DB" }}>appear here after compilation.</div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {loading && (
+                                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#6B7280" }}>
+                                            <div style={{ width: "14px", height: "14px", border: "2px solid #E5E7EB", borderTopColor: "#24d455", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                                            Compiling...
+                                        </div>
+                                    </div>
+                                )}
+
+                                {response && activeTab === "SQL" && (
+                                    <div className="tab-content" style={{ padding: "20px" }}>
+                                        <pre style={{ fontSize: "12px", lineHeight: "1.7", color: "#374151", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                                            {response.compiled_sql || JSON.stringify(response, null, 2)}
+                                        </pre>
+                                    </div>
+                                )}
+
+                                {response && activeTab === "Results" && (
+                                    <div className="tab-content" style={{ padding: "20px" }}>
+                                        {response.error ? (
+                                            <div style={{ padding: "12px 16px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "6px", fontSize: "12px", color: "#DC2626" }}>{response.error}</div>
+                                        ) : response.results ? (
+                                            <div>
+                                                <div style={{ fontSize: "11px", color: "#9CA3AF", marginBottom: "12px", fontFamily: "'JetBrains Mono', monospace" }}>{response.results.length} rows</div>
+                                                <pre style={{ fontSize: "12px", lineHeight: "1.6", color: "#374151", whiteSpace: "pre-wrap" }}>{JSON.stringify(response.results, null, 2)}</pre>
+                                            </div>
+                                        ) : (
+                                            <div style={{ fontSize: "12px", color: "#9CA3AF" }}>No results returned.</div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {response && activeTab === "Metrics" && (
+                                    <div className="tab-content" style={{ padding: "20px" }}>
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                                            {[
+                                                { label: "SQL", value: response.compiled_sql ? "Compiled" : "-" },
+                                                { label: "Parameters", value: response.parameters ? `${response.parameters.length} injected` : "-" },
+                                                { label: "Cache", value: response.cache_hit ? "Hit (<2ms)" : "Miss" },
+                                                { label: "Rows", value: response.results ? response.results.length : "-" },
+                                            ].map(({ label, value }) => (
+                                                <div key={label} style={{ padding: "12px", border: "1px solid #F3F4F6", borderRadius: "6px" }}>
+                                                    <div style={{ fontSize: "11px", color: "#9CA3AF", marginBottom: "4px" }}>{label}</div>
+                                                    <div style={{ fontSize: "13px", fontWeight: 500, color: "#111827" }}>{value}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {response && activeTab === "Cache" && (
+                                    <div className="tab-content" style={{ padding: "20px" }}>
+                                        <div style={{ fontSize: "11px", color: "#9CA3AF", fontFamily: "'JetBrains Mono', monospace", marginBottom: "12px" }}>
+                                            {response.cache_hit ? "Served from Redis cache" : "Computed fresh, cached for next request"}
+                                        </div>
+                                        <pre style={{ fontSize: "12px", lineHeight: "1.6", color: "#374151", whiteSpace: "pre-wrap" }}>
+                                            {response.parameters ? `Signature: ${JSON.stringify(response.parameters)}` : "No parameters"}
+                                        </pre>
+                                    </div>
+                                )}
+
+                                {response && activeTab === "Audit" && (
+                                    <div className="tab-content" style={{ padding: "20px" }}>
+                                        <div style={{ fontSize: "11px", color: "#9CA3AF", fontFamily: "'JetBrains Mono', monospace", marginBottom: "16px" }}>
+                                            Compliance log entry
+                                        </div>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                            {[
+                                                { label: "Prompt", value: prompt },
+                                                { label: "SQL", value: response.compiled_sql || "-" },
+                                                { label: "Parameters", value: response.parameters ? JSON.stringify(response.parameters) : "-" },
+                                                { label: "Cache", value: response.cache_hit ? "Hit" : "Miss" },
+                                                { label: "Rows", value: response.results ? String(response.results.length) : "-" },
+                                            ].map(({ label, value }) => (
+                                                <div key={label}>
+                                                    <div style={{ fontSize: "11px", color: "#9CA3AF", marginBottom: "4px", textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</div>
+                                                    <div style={{ fontSize: "12px", color: "#374151", fontFamily: "'JetBrains Mono', monospace", lineHeight: "1.6", wordBreak: "break-all" }}>{value}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
+
+                    <footer style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", height: "28px", borderTop: "1px solid #E5E7EB", background: "#FFFFFF", flexShrink: 0, fontSize: "11px", color: "#9CA3AF", fontFamily: "'JetBrains Mono', monospace" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                            <span>predicate v1.0.0</span>
+                            <span style={{ color: loading ? "#F59E0B" : "#86EFAC" }}>{loading ? "compiling" : "ready"}</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                            <span style={{ color: "#86EFAC" }}>Redis</span>
+                            <span style={{ color: "#86EFAC" }}>PostgreSQL</span>
+                            {metrics && <span>{totalQueries} queries</span>}
+                        </div>
+                    </footer>
                 </div>
             );
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<PredicateDashboard />);
+        root.render(<PredicateWorkspace />);
     </script>
 </body>
 </html>
