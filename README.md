@@ -4,7 +4,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/github/actions/workflow/status/palmshed/predicate/ci.yml?label=CI" alt="CI">
-  <img src="https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/Python-3.14+-3776AB?logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white" alt="Docker">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="License">
 </p>
@@ -49,7 +49,7 @@ sequenceDiagram
 ```
 
 1. **Authentication & Rate Limiting:** Validates API tokens and enforces request limits using atomic Redis counters.
-2. **Semantic Parser:** Converts natural language into a strict Pydantic blueprint using OpenAI Structured Outputs.
+2. **Semantic Parser:** Converts natural language into a strict Pydantic blueprint using configurable LLM providers (OpenAI, OpenRouter).
 3. **Query Compiler:** Produces parameterized SQL while automatically applying joins and tenant filters.
 4. **Cache Layer:** Uses SHA-256 query signatures to serve cached results from Redis before querying PostgreSQL.
 5. **Audit Pipeline:** Persists prompts, compiled SQL, and parameters for compliance and traceability.
@@ -87,16 +87,41 @@ To reproduce:
 
 ### Prerequisites
 
-- Docker
-- Docker Compose
-- OpenAI API Key
+- Python 3.14+
+- PostgreSQL 15+ (or Docker)
+- Redis 7+ (or Docker)
+- LLM API key (OpenRouter free tier or OpenAI)
 
-### Local Deployment
+### Local Setup (no Docker)
+
+```bash
+# Install dependencies
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Start services (Homebrew)
+brew services start postgresql
+brew services start redis
+
+# Create database and seed
+createdb predicate_db
+psql predicate_db < init.sql
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your LLM API key
+
+# Run
+uvicorn app.main:app --reload
+```
+
+### Docker Setup
 
 ```bash
 cp .env.example .env
 
-# Configure your OpenAI API key.
+# Configure your LLM API key (OpenRouter free or OpenAI).
 # Enable REQUIRE_AUTH=true when testing authenticated deployments.
 
 docker-compose up --build
@@ -104,6 +129,7 @@ docker-compose up --build
 
 After startup:
 
+- Workspace: `http://localhost:8000`
 - Swagger UI: `http://localhost:8000/docs`
 - Health Check: `http://localhost:8000/health`
 
