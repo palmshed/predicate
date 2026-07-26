@@ -24,20 +24,13 @@ Predicate is an open-core NL-to-SQL middleware that translates natural language 
 | Redis       | 7+              |
 | LLM API key | OpenRouter or OpenAI |
 
-### Step 1: Clone and create a virtual environment
+### Step 1: Clone and install dependencies
 
 ```bash
 git clone https://github.com/palmshed/predicate.git
 cd predicate
 
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
-### Step 2: Install dependencies
-
-```bash
-pip install -r requirements.txt
+uv sync
 ```
 
 ### Step 3: Start PostgreSQL and Redis via Homebrew
@@ -83,7 +76,7 @@ For local development, leave `REQUIRE_AUTH=false` and `ALLOWED_ORIGINS` set to l
 ### Step 6: Start the API server
 
 ```bash
-uvicorn app.main:app --reload
+uv run uvicorn app.main:app --reload
 ```
 
 ### Step 7: Verify the deployment
@@ -182,7 +175,7 @@ Create `.env.production` on the target host. All variables are read by the `web_
 Generate a CSRF secret key:
 
 ```bash
-python -c "import secrets; print(secrets.token_hex(32))"
+uv run python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
 #### Optional
@@ -516,6 +509,6 @@ docker run --rm \
 | Check health             | `curl http://localhost:8000/health`                                      |
 | View logs                | `docker-compose logs -f web_api`                                         |
 | Run migrations           | `alembic upgrade head`                                                   |
-| Generate CSRF key        | `python -c "import secrets; print(secrets.token_hex(32))"`               |
+| Generate CSRF key        | `uv run python -c "import secrets; print(secrets.token_hex(32))"`         |
 | Backup database          | `pg_dump -U postgres predicate_db \| gzip > backup.sql.gz`               |
 | Rollback migration       | `alembic downgrade -1`                                                   |

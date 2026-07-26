@@ -386,7 +386,7 @@ git checkout main
 git pull origin main
 
 # 2. Update dependencies
-pip install -r requirements.txt
+uv sync
 
 # 3. Run database migrations
 alembic upgrade head

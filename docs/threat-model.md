@@ -518,8 +518,8 @@ Implemented in `app/middleware/security.py:43-122`:
 
 | Priority | Recommendation | Rationale |
 |----------|---------------|-----------|
-| P1 | Pin all Python dependencies in `requirements.txt` with exact versions | Prevents unexpected behavior from upstream changes. |
-| P1 | Use `pip-audit` or `snyk` in CI to scan for known vulnerabilities | Detects vulnerable dependencies. |
+| P1 | Pin all Python dependencies in `pyproject.toml` with exact versions | Prevents unexpected behavior from upstream changes. |
+| P1 | Use `uv audit` or `snyk` in CI to scan for known vulnerabilities | Detects vulnerable dependencies. |
 | P2 | Sign Docker images and verify checksums | Ensures image integrity in deployment. |
 
 ### 6.8 Data Protection

@@ -90,6 +90,8 @@ Celery workers for long-running CSV exports with progress states.
 ### Quick Start (Docker)
 
 ```bash
+git clone https://github.com/palmshed/predicate.git
+cd predicate
 cp .env.example .env
 # Edit .env -- set your LLM API key
 docker-compose up --build
@@ -102,20 +104,12 @@ docker-compose up --build
 ### Local Setup
 
 ```bash
-python3 -m venv venv
-source .venv/bin/activate
-pip install -r requirements.txt
+git clone https://github.com/palmshed/predicate.git
+cd predicate
 
-brew services start postgresql
-brew services start redis
+uv sync
 
-createdb predicate_db
-psql predicate_db < init.sql
-
-cp .env.example .env
-# Edit .env
-
-uvicorn app.main:app --reload
+uv run uvicorn app.main:app --reload
 ```
 
 ---
@@ -282,6 +276,9 @@ predicate/
 ├── docs/               # Documentation
 ├── tests/              # 37 tests
 ├── benchmark.py        # Performance benchmark suite
+├── pyproject.toml      # Project metadata and dependencies
+├── uv.lock             # Locked dependencies
+├── Dockerfile          # Container build
 └── init.sql            # Database schema
 ```
 
@@ -305,9 +302,9 @@ Compiler throughput remains sub-microsecond at all schema scales from 10 to 500 
 To reproduce:
 
 ```bash
-python3 benchmark.py                    # all phases
-python3 benchmark.py --phase 1          # compiler only
-python3 benchmark.py --phase 3 --users 100 --duration 30
+uv run python benchmark.py                    # all phases
+uv run python benchmark.py --phase 1          # compiler only
+uv run python benchmark.py --phase 3 --users 100 --duration 30
 ```
 
 See `docs/benchmark-methodology.md` for details.
@@ -317,8 +314,7 @@ See `docs/benchmark-methodology.md` for details.
 ## Testing
 
 ```bash
-source .venv/bin/activate
-pytest -v
+uv run pytest -v
 ```
 
 37 tests across 5 files: compiler, API, security, aggregations, and integration.
