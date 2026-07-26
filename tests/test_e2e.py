@@ -79,14 +79,10 @@ class TestHistory:
         textarea.fill("Count all customers")
         textarea.press("Control+Enter")
         page.wait_for_selector("text=Completed", timeout=60000)
-        page.wait_for_function(
-            "JSON.parse(localStorage.getItem('pred_history') || '[]').length > 0",
-            timeout=10000,
-        )
-        history_count = page.evaluate(
-            "() => JSON.parse(localStorage.getItem('pred_history') || '[]').length"
-        )
-        assert history_count > 0
+        page.keyboard.press("h")
+        page.wait_for_selector("[aria-label=\"Query history\"]", timeout=10000)
+        history_panel = page.locator("[aria-label=\"Query history\"]")
+        assert history_panel.locator("text=No queries yet").count() == 0
 
 
 class TestAccessibility:
