@@ -38,6 +38,16 @@
       </section>
 
       <section>
+        <h2>Query data</h2>
+        <p>When you use the predicate API, the following data is processed and stored:</p>
+        <ul>
+          <li><strong>Audit log</strong>, every API request is logged to a PostgreSQL audit table. This includes your tenant ID, user prompt, compiled SQL, query parameters, cache hit status, request ID, timing (compile, validate, execute), rows returned, target table, and any error codes.</li>
+          <li><strong>Query cache</strong>, query results are cached in Redis for 300 seconds to improve performance. Cached data is keyed by a SHA-256 hash of the SQL and parameters and expires automatically.</li>
+          <li><strong>LLM processing</strong>, your natural language prompt is sent to the configured LLM provider (OpenAI or OpenRouter) for translation into a structured JSON blueprint. The prompt is subject to the provider's privacy policy.</li>
+        </ul>
+      </section>
+
+      <section>
         <h2>How we use your data</h2>
         <p>We use your information solely to respond to inquiries, operate and secure the site, improve the project based on direct feedback, and comply with legal obligations when required.</p>
       </section>
@@ -59,7 +69,7 @@
 
       <section>
         <h2>Version</h2>
-        <p>This policy is version 1.0.0, last updated July 26, 2026.</p>
+        <p>This policy is version 1.0.1, last updated July 27, 2026.</p>
       </section>
       <p class="feedback">Found something unexpected? <a href="https://github.com/palmshed/predicate/issues">Report an issue</a>.</p>
     </div>

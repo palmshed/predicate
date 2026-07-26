@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>predicate</title>
-    <meta name="description" content="predicate ~ natural language to SQL translation middleware." />
+    <meta name="description" content="predicate ~ natural language to SQL compilation platform." />
     <link rel="stylesheet" href="./styles.css" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
   </head>
@@ -30,6 +30,7 @@
             <path d="M11 15.5c.5 2.5-.17 4.5-1 6.5h4c2-5.5-.5-12-1-14"/>
           </svg>
           <span>predicate</span>
+          <span class="version-badge">v1.0.0</span>
         </div>
         <h1>Natural language to SQL</h1>
         <p>Translate plain-text questions into parameterized, tenant-isolated PostgreSQL queries via an intermediate JSON schema. The AI never touches raw SQL.</p>
@@ -74,6 +75,8 @@ print(data["results"])        # [{...}, {...}]</code></pre>
           <li><strong>rate limit</strong>, per-tenant fixed-window rate limiting across three tiers.</li>
           <li><strong>export</strong>, async Celery workers for bulk CSV exports without HTTP timeouts.</li>
           <li><strong>audit</strong>, compliance sink that logs every prompt, query, and result to PostgreSQL.</li>
+          <li><strong>security</strong>, CSRF protection, security headers (HSTS, CSP, nosniff), input validation, query timeouts.</li>
+          <li><strong>observe</strong>, structured JSON logging, X-Request-ID correlation, TraceContext spans, Prometheus metrics.</li>
         </ul>
       </section>
 
@@ -89,10 +92,21 @@ print(data["results"])        # [{...}, {...}]</code></pre>
       </section>
 
       <section>
+        <h2>API endpoints</h2>
+        <pre><code>POST /api/v1/query/compile    Translate NL to SQL and execute
+POST /api/v1/export/async    Queue bulk CSV export (Celery)
+GET  /api/v1/metrics         Per-tenant analytics
+GET  /health                 Health check (db, redis, uptime)
+GET  /ready                  Readiness probe
+GET  /metrics                Prometheus metrics</code></pre>
+      </section>
+
+      <section>
         <h2>Resources</h2>
         <ul>
           <li><a href="https://github.com/palmshed/predicate">GitHub</a></li>
           <li><a href="https://github.com/palmshed/predicate/blob/main/README.md">Documentation</a></li>
+          <li><a href="http://localhost:8000/docs">Swagger UI</a></li>
         </ul>
         <p class="feedback">Found something unexpected? <a href="https://github.com/palmshed/predicate/issues">Report an issue</a>.</p>
       </section>
