@@ -13,7 +13,7 @@ MOCK_TENANT_REGISTRY = {
 
 def validate_api_key(api_key: str = Security(api_key_header)) -> dict:
     if os.getenv("REQUIRE_AUTH", "false").lower() != "true":
-        return {"tenant_id": "local_dev_tenant", "plan": "sandbox"}
+        return {"tenant_id": "tenant_alpha", "plan": "sandbox"}
 
     if not api_key:
         raise HTTPException(

@@ -1,4 +1,5 @@
 import os
+import json
 from typing import List, Optional, Literal, Any
 from pydantic import BaseModel, Field
 from openai import OpenAI
@@ -69,29 +70,59 @@ class QueryBlueprint(BaseModel):
     pagination: PaginationConfig = Field(default_factory=PaginationConfig)
 
 
+BLUEPRINT_SCHEMA = json.dumps(QueryBlueprint.model_json_schema(), indent=2)
+
+
 class AgentService:
     def __init__(self):
         config = PROVIDER_CONFIG.get(LLM_PROVIDER, PROVIDER_CONFIG["openai"])
         api_key = os.getenv(config["api_key_env"])
 
+        headers = {}
+        if LLM_PROVIDER == "openrouter":
+            headers = {
+                "HTTP-Referer": "https://predicate.palmshed.dev",
+                "X-Title": "Predicate AI Engine",
+            }
+
         self.client = OpenAI(
             api_key=api_key,
             base_url=config["base_url"],
-            default_headers={
-                "HTTP-Referer": "https://predicate.palmshed.dev",
-                "X-Title": "Predicate AI Engine",
-            } if LLM_PROVIDER == "openrouter" else {},
+            default_headers=headers,
         )
         self.model = LLM_MODEL
+        self.supports_structured = LLM_PROVIDER == "openai"
 
     def translate_text_to_blueprint(self, user_question: str) -> QueryBlueprint:
-        response = self.client.beta.chat.completions.parse(
+        if self.supports_structured:
+            response = self.client.beta.chat.completions.parse(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": user_question}
+                ],
+                response_format=QueryBlueprint,
+                temperature=0.0
+            )
+            return response.choices[0].message.parsed
+
+        parse_prompt = f"""{SYSTEM_PROMPT}
+
+You MUST respond with a single JSON object matching this exact schema. No markdown, no explanation, just raw JSON:
+
+{BLUEPRINT_SCHEMA}"""
+
+        response = self.client.chat.completions.create(
             model=self.model,
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": parse_prompt},
                 {"role": "user", "content": user_question}
             ],
-            response_format=QueryBlueprint,
-            temperature=0.0
+            temperature=0.0,
         )
-        return response.choices[0].message.parsed
+
+        raw = response.choices[0].message.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+
+        return QueryBlueprint.model_validate_json(raw)

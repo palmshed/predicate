@@ -5,6 +5,8 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
+load_dotenv()
+
 from app.agent.services import AgentService
 from app.compiler.sql_builder import build_secure_query
 from app.database.connection import execute_secure_query
@@ -15,8 +17,6 @@ from app.database.metrics import record_tenant_metric, get_tenant_metrics
 from app.database.audit import sink_compliance_audit_log
 from app.worker import execute_heavy_export_task
 from celery.result import AsyncResult
-
-load_dotenv()
 
 app = FastAPI(
     title="Predicate AI Engine",
