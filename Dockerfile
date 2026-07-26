@@ -17,11 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml uv.lock .python-version ./
-RUN for i in 1 2 3; do
-    uv sync --frozen --no-dev && break
-    echo "::warning::uv sync attempt $i failed; retrying"
-    sleep 5
-  done
+RUN for i in 1 2 3; do uv sync --frozen --no-dev && break; echo "::warning::uv sync attempt $i failed; retrying"; sleep 5; done
 
 COPY . .
 
