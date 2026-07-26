@@ -86,6 +86,22 @@ jobs:
       - name: Install Playwright browsers
         run: uv run playwright install chromium --with-deps
 
+      - name: Start server for E2E
+        env:
+          DATABASE_URL: postgresql://postgres:securepassword123@localhost:5432/predicate_db_test
+          REDIS_URL: redis://localhost:6379/0
+          REQUIRE_AUTH: "false"
+          OPENAI_API_KEY: sk-mock-key-for-testing-purposes-only
+        run: |
+          uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+              echo "Server ready"
+              break
+            fi
+            sleep 1
+          done
+
       - name: Playwright E2E
         env:
           DATABASE_URL: postgresql://postgres:securepassword123@localhost:5432/predicate_db_test
