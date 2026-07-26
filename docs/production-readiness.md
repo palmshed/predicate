@@ -6,7 +6,7 @@
 
 - [ ] Rotate `OPENROUTER_API_KEY` or `OPENAI_API_KEY` from defaults
 - [ ] Set `REQUIRE_AUTH=true` in production environment
-- [ ] Set a strong `CSRF_SECRET_KEY` (generate with `python -c "import secrets; print(secrets.token_hex(32))"`)
+- [ ] Set a strong `CSRF_SECRET_KEY` (generate with `uv run python -c "import secrets; print(secrets.token_hex(32))"`)
 - [ ] Enable SSL/TLS termination at load balancer
 - [ ] Review and update `MOCK_TENANT_REGISTRY` with production API keys
 - [ ] Set strong PostgreSQL password (not `securepassword123`)
@@ -124,7 +124,7 @@ docker-compose -f docker-compose.prod.yml up -d
 git pull origin main
 
 # Install dependencies
-pip install -r requirements.txt
+uv sync
 
 # Run migrations
 alembic upgrade head
@@ -223,7 +223,7 @@ psql -U postgres predicate_db < backup_20260726.sql
 
 - [ ] All tests passing: `pytest -v` (37/37)
 - [ ] CI pipeline green
-- [ ] Benchmark suite passing: `python benchmark.py`
+- [ ] Benchmark suite passing: `uv run python benchmark.py`
 - [ ] Security audit completed (see docs/threat-model.md)
 - [ ] Documentation updated (README, CHANGELOG, docs/)
 - [ ] Load testing completed (phase 3 of benchmark suite)

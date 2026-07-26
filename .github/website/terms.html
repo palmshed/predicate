@@ -22,7 +22,7 @@
 
     <div class="hero hero-short">
       <div class="hero-content">
-        <h1>Terms</h1>
+        <h1>Terms v1.0.0</h1>
         <p>These terms apply when you use predicate.</p>
       </div>
     </div>
@@ -40,7 +40,7 @@
 
       <section>
         <h2>Content</h2>
-        <p>You retain ownership of content you submit. predicate does not claim rights over your inputs or outputs. Queries are processed in-memory and are not stored beyond the audit log.</p>
+        <p>You retain ownership of content you submit. predicate does not claim rights over your inputs or outputs. Queries are processed and cached temporarily in Redis (300-second TTL). A permanent audit log entry is stored in PostgreSQL for compliance, containing the prompt, compiled SQL, parameters, and result metadata.</p>
       </section>
 
       <section>

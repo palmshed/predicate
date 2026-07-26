@@ -1,13 +1,11 @@
 import time
-from fastapi import HTTPException, status, Depends
-from app.database.cache import get_redis_client
-from app.auth.security import validate_api_key
 
-TIER_LIMITS = {
-    "sandbox": 60,
-    "growth": 20,
-    "enterprise": 100
-}
+from fastapi import Depends, HTTPException, status
+
+from app.auth.security import validate_api_key
+from app.database.cache import get_redis_client
+
+TIER_LIMITS = {"sandbox": 60, "growth": 20, "enterprise": 100}
 
 
 def check_rate_limit(tenant_context: dict = Depends(validate_api_key)) -> dict:
@@ -35,8 +33,8 @@ def check_rate_limit(tenant_context: dict = Depends(validate_api_key)) -> dict:
                     "error": "Rate limit exceeded.",
                     "limit_allowed": limit,
                     "time_window": "60 seconds",
-                    "suggestion": "Upgrade your tier to unlock higher limits."
-                }
+                    "suggestion": "Upgrade your tier to unlock higher limits.",
+                },
             )
     except HTTPException:
         raise

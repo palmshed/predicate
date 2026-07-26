@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Architecture ~ predicate</title>
+    <title>Architecture ~ predicate v1.0.0</title>
     <meta name="description" content="The architecture and design decisions behind predicate." />
     <link rel="stylesheet" href="./styles.css" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
@@ -23,6 +23,7 @@
     <div class="hero hero-short">
       <div class="hero-content">
         <h1>Architecture</h1>
+        <span class="version-badge">v1.0.0</span>
         <p>How the natural language to SQL pipeline works, and why it is safe by design.</p>
       </div>
     </div>
@@ -32,25 +33,27 @@
         <h2>Pipeline</h2>
         <p>Every query follows a strict path that separates the AI layer from the database layer. The AI generates a structured JSON blueprint. The compiler translates that blueprint into parameterized SQL. The AI never sees or generates raw SQL.</p>
         <pre><code>User Text
-  -> LLM Provider (OpenAI / OpenRouter)
-  -> JSON Blueprint (Pydantic validated)
-  -> SQL Compiler (parameterized, tenant-isolated)
-  -> PostgreSQL Execution
-  -> Cached Response</code></pre>
-      </section>
-
-      <section>
-        <h2>Multi-tenant isolation</h2>
-        <p>Every query is automatically scoped to the requesting tenant. The <code>tenant_id</code> is injected server-side from the validated API key. The AI cannot override, forge, or bypass this filter. JOINs across tables are automatically resolved with tenant scoping on every joined table.</p>
+   -> LLM Provider (OpenAI / OpenRouter)
+   -> JSON Blueprint (Pydantic validated)
+   -> SQL Compiler (parameterized, tenant-isolated)
+   -> PostgreSQL Execution
+   -> Redis Cache
+   -> Cached Response</code></pre>
       </section>
 
       <section>
         <h2>Security model</h2>
         <ul>
+          <li><strong>Request ID middleware</strong>, X-Request-ID on every request for end-to-end tracing.</li>
           <li><strong>Parameterized SQL only</strong>, all values use <code>%s</code> placeholders. No string interpolation.</li>
-          <li><strong>Schema whitelist</strong>, <code>ALLOWED_SCHEMA</code> defines which tables and columns can be queried. Anything outside the whitelist is rejected.</li>
-          <li><strong>JOIN graph</strong>, <code>RELATIONSHIP_GRAPH</code> defines allowed foreign key paths. The compiler resolves JOINs automatically.</li>
-          <li><strong>Aggregation whitelist</strong>, <code>ALLOWED_AGGREGATIONS</code> controls which aggregate functions (COUNT, SUM, AVG) can be applied to which columns.</li>
+          <li><strong>Schema whitelist</strong>, <code>ALLOWED_SCHEMA</code> defines which tables and columns can be queried.</li>
+          <li><strong>JOIN graph</strong>, <code>RELATIONSHIP_GRAPH</code> defines allowed foreign key paths.</li>
+          <li><strong>Aggregation whitelist</strong>, <code>ALLOWED_AGGREGATIONS</code> controls permitted aggregate functions.</li>
+          <li><strong>Query timeouts</strong>, configurable per-request, default 30 seconds.</li>
+          <li><strong>Input validation</strong>, Pydantic models constrain AI output to safe schemas.</li>
+          <li><strong>Read-only DB role</strong>, <code>predicate_reader</code> cannot write, only <code>INSERT</code> into audit_logs.</li>
+          <li><strong>Security headers</strong>, X-Frame-Options DENY, HSTS, CSP, nosniff, Referrer-Policy, Permissions-Policy.</li>
+          <li><strong>CSRF protection</strong>, signed cookie with Secure flag for browser requests.</li>
           <li><strong>Rate limiting</strong>, Redis fixed-window rate limiting per tenant, configurable by tier.</li>
           <li><strong>Audit log</strong>, every prompt, compiled query, and result is logged to PostgreSQL for compliance.</li>
         </ul>
@@ -70,6 +73,15 @@
           <li><strong>RELATIONSHIP_GRAPH</strong>, your foreign key definitions for automatic JOIN resolution.</li>
         </ul>
         <p>The rest of the pipeline (caching, auth, rate limiting, exports) adapts automatically.</p>
+      </section>
+      <section>
+        <h2>Observability</h2>
+        <ul>
+          <li><strong>Structured JSON logging</strong> with X-Request-ID correlation on every request.</li>
+          <li><strong>TraceContext spans</strong> for compile → validate → execute → cache phases.</li>
+          <li><strong>Prometheus metrics</strong> at <code>/metrics</code>: compile duration by provider, cache hits, query failures, query efficiency score.</li>
+          <li><strong>Health endpoints</strong>: <code>/health</code> checks db + redis, <code>/ready</code> for readiness probes.</li>
+        </ul>
       </section>
       <p class="feedback">Found something unexpected? <a href="https://github.com/palmshed/predicate/issues">Report an issue</a>.</p>
     </div>

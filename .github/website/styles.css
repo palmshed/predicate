@@ -123,6 +123,17 @@ nav {
 .hero-mark span {
   font-size: 0.8125rem;
   color: var(--text-secondary);
+}
+
+.version-badge {
+  font-size: 0.6875rem;
+  background: var(--border);
+  color: var(--text-secondary);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  margin-left: 0.5em;
+  vertical-align: middle;
+}
   font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;

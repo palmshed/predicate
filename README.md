@@ -29,7 +29,7 @@ The LLM never touches raw SQL. It produces a structured JSON blueprint containin
 graph TD
     A[HTTP Request Client] --> B[Rate Limiter Check]
     B --> C[API Token Validator]
-    C --> D[OpenAI Semantic Parser]
+    C --> D[LLM Semantic Parser]
     D --> E[Query Compiler Engine]
     E --> F{Redis Cache Check}
     F -- Hit < 2ms --> G[Return Serialized Rows]
@@ -90,6 +90,8 @@ Celery workers for long-running CSV exports with progress states.
 ### Quick Start (Docker)
 
 ```bash
+git clone https://github.com/palmshed/predicate.git
+cd predicate
 cp .env.example .env
 # Edit .env -- set your LLM API key
 docker-compose up --build
@@ -102,20 +104,12 @@ docker-compose up --build
 ### Local Setup
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+git clone https://github.com/palmshed/predicate.git
+cd predicate
 
-brew services start postgresql
-brew services start redis
+uv sync
 
-createdb predicate_db
-psql predicate_db < init.sql
-
-cp .env.example .env
-# Edit .env
-
-uvicorn app.main:app --reload
+uv run uvicorn app.main:app --reload
 ```
 
 ---
@@ -163,15 +157,35 @@ Response:
 
 ```json
 {
-  "sql": "SELECT o.id, c.name FROM orders o JOIN customers c ON o.customer_id = c.id WHERE c.is_active = %s AND c.country = %s",
-  "parameters": [true, "Germany"],
-  "rows": [
-    {"id": 1001, "name": "Hans Mueller"},
-    {"id": 1002, "name": "Anna Schmidt"}
-  ],
+  "status": "success",
+  "request_id": "6e25441a-d376-4322-8d36-f29e3033fa23",
+  "compiled_sql": "SELECT customers.* FROM customers WHERE customers.tenant_id = %s AND customers.country = %s LIMIT 20 OFFSET 0;",
+  "parameters": ["tenant_alpha", "Germany"],
   "cache_hit": false,
-  "tenant_id": "acme",
-  "request_id": "req_a1b2c3d4"
+  "results": [
+    {"id": 1, "name": "Hans Mueller", "country": "Germany", "status": "active"},
+    {"id": 2, "name": "Anna Schmidt", "country": "Germany", "status": "active"}
+  ],
+  "agent_blueprint": {
+    "target_table": "customers",
+    "projection_columns": [],
+    "filters": [
+      {"column": "country", "operator": "equals", "value": "Germany"}
+    ],
+    "sorting": null,
+    "pagination": {"limit": 20, "offset": 0}
+  },
+  "trace": {
+    "request_id": "6e25441a-d376-4322-8d36-f29e3033fa23",
+    "tenant_id": "tenant_alpha",
+    "total_ms": 3503.63,
+    "spans": [
+      {"name": "compile", "ms": 3490.18},
+      {"name": "validate", "ms": 0.04},
+      {"name": "cache_lookup", "ms": 0.74},
+      {"name": "execute", "ms": 10.33}
+    ]
+  }
 }
 ```
 
@@ -230,6 +244,8 @@ Returns metrics in Prometheus exposition format.
 
 ## Security
 
+Predicate prevents classic SQL injection by design through a compiler-based architecture. The LLM is treated as an untrusted parser -- it produces a validated JSON blueprint, not SQL. The compiler generates SQL only from a schema whitelist and always uses parameterized queries.
+
 - All SQL is parameterized -- the AI never touches raw SQL.
 - `tenant_id` is injected server-side and cannot be forged from client input.
 - Query execution runs under a read-only database role (`predicate_reader`).
@@ -260,6 +276,9 @@ predicate/
 ├── docs/               # Documentation
 ├── tests/              # 37 tests
 ├── benchmark.py        # Performance benchmark suite
+├── pyproject.toml      # Project metadata and dependencies
+├── uv.lock             # Locked dependencies
+├── Dockerfile          # Container build
 └── init.sql            # Database schema
 ```
 
@@ -283,9 +302,9 @@ Compiler throughput remains sub-microsecond at all schema scales from 10 to 500 
 To reproduce:
 
 ```bash
-python benchmark.py                    # all phases
-python benchmark.py --phase 1          # compiler only
-python benchmark.py --phase 3 --users 100 --duration 30
+uv run python benchmark.py                    # all phases
+uv run python benchmark.py --phase 1          # compiler only
+uv run python benchmark.py --phase 3 --users 100 --duration 30
 ```
 
 See `docs/benchmark-methodology.md` for details.
@@ -295,8 +314,7 @@ See `docs/benchmark-methodology.md` for details.
 ## Testing
 
 ```bash
-source venv/bin/activate
-pytest -v
+uv run pytest -v
 ```
 
 37 tests across 5 files: compiler, API, security, aggregations, and integration.

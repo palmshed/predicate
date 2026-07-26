@@ -55,9 +55,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Alembic migration setup
 
 **Documentation**
-- Threat model (docs/threat-model.md)
+- Threat model (docs/threat-model.md) with security assumptions
 - Benchmark methodology (docs/benchmark-methodology.md)
 - Production readiness checklist (docs/production-readiness.md)
+- Deployment guide (docs/deployment.md)
+- Operations guide (docs/operations.md)
 
 ### Changed
 

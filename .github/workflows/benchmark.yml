@@ -1,0 +1,83 @@
+name: Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: "Phase to run (1-4, or empty for all)"
+        required: false
+        type: string
+      dataset:
+        description: "Dataset size for phase 2"
+        required: false
+        default: "medium"
+        type: choice
+        options: ["small", "medium", "large"]
+  schedule:
+    - cron: "0 3 * * 0"  # Weekly on Sunday at 03:00 UTC
+
+jobs:
+  benchmark:
+    name: Run Benchmark Suite
+    runs-on: ubuntu-latest
+
+    services:
+      postgres_db:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: securepassword123
+          POSTGRES_DB: predicate_benchmark
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis_cache:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - run: uv python install 3.14
+      - run: uv sync --frozen --dev
+
+      - name: Init database
+        env:
+          DATABASE_URL: postgresql://postgres:securepassword123@localhost:5432/predicate_benchmark
+        run: psql "$DATABASE_URL" -f init.sql
+
+      - name: Run benchmarks
+        env:
+          DATABASE_URL: postgresql://postgres:securepassword123@localhost:5432/predicate_benchmark
+          REDIS_URL: redis://localhost:6379/0
+          REQUIRE_AUTH: "false"
+          OPENAI_API_KEY: sk-mock-key-for-testing-purposes-only
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.phase }}" ]; then
+            ARGS="--phase ${{ inputs.phase }}"
+          fi
+          if [ -n "${{ inputs.dataset }}" ]; then
+            ARGS="$ARGS --dataset ${{ inputs.dataset }}"
+          fi
+          uv run python benchmark.py $ARGS 2>&1 | tee benchmark-output.txt
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark-output.txt

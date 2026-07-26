@@ -1,8 +1,10 @@
-import os
 import json
-from typing import List, Optional, Literal, Any
-from pydantic import BaseModel, Field
+import os
+from typing import Any, Literal
+
 from openai import OpenAI
+from pydantic import BaseModel, Field
+
 from app.agent.prompts import SYSTEM_PROMPT
 
 # Provider configuration
@@ -26,7 +28,9 @@ class FilterItem(BaseModel):
     operator: Literal["equals", "greater_than", "less_than", "contains"] = Field(
         description="The mathematical comparison operator."
     )
-    value: Any = Field(description="The primitive criteria value (string, integer, float, etc.) to evaluate.")
+    value: Any = Field(
+        description="The primitive criteria value (string, integer, float, etc.) to evaluate."
+    )
 
 
 class SortingConfig(BaseModel):
@@ -40,13 +44,15 @@ class PaginationConfig(BaseModel):
 
 
 class AggregationConfig(BaseModel):
-    type: Optional[Literal["count", "sum", "avg"]] = Field(
-        default=None,
-        description="The mathematical aggregate calculation requested by the user."
+    type: Literal["count", "sum", "avg"] | None = Field(
+        default=None, description="The mathematical aggregate calculation requested by the user."
     )
-    column: Optional[str] = Field(
+    column: str | None = Field(
         default=None,
-        description="The database target column to aggregate. Use '*' only if the type requested is 'count'."
+        description=(
+            "The database target column to aggregate. "
+            "Use '*' only if the type requested is 'count'."
+        ),
     )
 
 
@@ -54,19 +60,27 @@ class QueryBlueprint(BaseModel):
     target_table: Literal["customers", "orders", "products"] = Field(
         description="The primary target base table needed to fulfill the inquiry."
     )
-    projection_columns: List[str] = Field(
+    projection_columns: list[str] = Field(
         default=[],
-        description="Columns to pull. For fields on related tables use explicit dot notation, e.g., 'customers.country'."
+        description=(
+            "Columns to pull. For fields on related tables use explicit "
+            "dot notation, e.g., 'customers.country'."
+        ),
     )
-    filters: List[FilterItem] = Field(
+    filters: list[FilterItem] = Field(
         default=[],
-        description="Conditions. Use dot notation for related table fields, e.g., 'customers.country'."
+        description=(
+            "Conditions. Use dot notation for related table fields, e.g., 'customers.country'."
+        ),
     )
-    aggregation: Optional[AggregationConfig] = Field(
+    aggregation: AggregationConfig | None = Field(
         default=None,
-        description="Populate this sub-block if the user asks for mathematical summaries like totals, counts, or averages."
+        description=(
+            "Populate this sub-block if the user asks for mathematical "
+            "summaries like totals, counts, or averages."
+        ),
     )
-    sorting: Optional[SortingConfig] = Field(default=None)
+    sorting: SortingConfig | None = Field(default=None)
     pagination: PaginationConfig = Field(default_factory=PaginationConfig)
 
 
@@ -99,29 +113,30 @@ class AgentService:
                 model=self.model,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_question}
+                    {"role": "user", "content": user_question},
                 ],
                 response_format=QueryBlueprint,
-                temperature=0.0
+                temperature=0.0,
             )
-            return response.choices[0].message.parsed
+            return response.choices[0].message.parsed  # type: ignore[return-value]
 
-        parse_prompt = f"""{SYSTEM_PROMPT}
-
-You MUST respond with a single JSON object matching this exact schema. No markdown, no explanation, just raw JSON:
-
-{BLUEPRINT_SCHEMA}"""
+        parse_prompt = (
+            f"{SYSTEM_PROMPT}\n\n"
+            "You MUST respond with a single JSON object matching this exact "
+            "schema. No markdown, no explanation, just raw JSON:\n\n"
+            f"{BLUEPRINT_SCHEMA}"
+        )
 
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[
                 {"role": "system", "content": parse_prompt},
-                {"role": "user", "content": user_question}
+                {"role": "user", "content": user_question},
             ],
             temperature=0.0,
         )
 
-        raw = response.choices[0].message.content.strip()
+        raw = (response.choices[0].message.content or "").strip()
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
 

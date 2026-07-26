@@ -1,7 +1,8 @@
+import contextlib
 import os
 import time
-import contextlib
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any
+
 from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
 
@@ -14,12 +15,10 @@ def get_connection_pool():
     if _db_pool is None:
         try:
             _db_pool = pool.SimpleConnectionPool(
-                minconn=1,
-                maxconn=20,
-                dsn=os.getenv("DATABASE_URL")
+                minconn=1, maxconn=20, dsn=os.getenv("DATABASE_URL")
             )
         except Exception as e:
-            raise RuntimeError(f"Failed to initialize PostgreSQL connection pool: {str(e)}")
+            raise RuntimeError(f"Failed to initialize PostgreSQL connection pool: {str(e)}") from e
     return _db_pool
 
 
@@ -30,9 +29,7 @@ def get_readonly_connection_pool():
         if readonly_url:
             try:
                 _readonly_db_pool = pool.SimpleConnectionPool(
-                    minconn=1,
-                    maxconn=10,
-                    dsn=readonly_url
+                    minconn=1, maxconn=10, dsn=readonly_url
                 )
             except Exception:
                 _readonly_db_pool = None
@@ -63,13 +60,20 @@ def get_db_cursor(readonly: bool = False):
 
 
 def execute_secure_query(
-    sql_string: str,
-    parameters: List[Any],
-    timeout_seconds: Optional[int] = None
-) -> Tuple[List[Dict[str, Any]], float]:
+    sql_string: str, parameters: list[Any], timeout_seconds: int | None = None
+) -> tuple[list[dict[str, Any]], float]:
     """Execute parameterized query. Returns (results, db_query_ms)."""
     if not os.getenv("DATABASE_URL"):
-        return ([{"mock_data_notice": "DATABASE_URL not configured. This is a simulated record response."}], 0)
+        return (
+            [
+                {
+                    "mock_data_notice": (
+                        "DATABASE_URL not configured. This is a simulated record response."
+                    ),
+                }
+            ],
+            0,
+        )
 
     effective_timeout = timeout_seconds or int(os.getenv("QUERY_TIMEOUT_SECONDS", "30"))
 
@@ -77,9 +81,6 @@ def execute_secure_query(
         cursor.execute(f"SET statement_timeout = '{effective_timeout}s'")
         query_start = time.perf_counter()
         cursor.execute(sql_string, parameters)
-        if cursor.description:
-            results = cursor.fetchall()
-        else:
-            results = []
+        results = cursor.fetchall() if cursor.description else []
         db_ms = round((time.perf_counter() - query_start) * 1000, 2)
-        return results, db_ms
+        return results, db_ms  # type: ignore[return-value]

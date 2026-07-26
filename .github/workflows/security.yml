@@ -1,0 +1,78 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"  # Weekly on Monday at 06:00 UTC
+
+jobs:
+  bandit:
+    name: Bandit Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - run: uv python install 3.14
+      - run: uv sync --frozen --dev
+
+      - name: Run Bandit
+        run: uv run bandit -r app/ -c pyproject.toml -f json -o bandit-report.json || true
+
+      - name: Bandit summary
+        if: always()
+        run: |
+          if [ -f bandit-report.json ]; then
+            uv run python -c "
+          import json
+          with open('bandit-report.json') as f:
+              data = json.load(f)
+          metrics = data.get('metrics', {}).get('_totals', {})
+          print(f\"High: {metrics.get('SEVERITY.HIGH', 0)}\")
+          print(f\"Medium: {metrics.get('SEVERITY.MEDIUM', 0)}\")
+          print(f\"Low: {metrics.get('SEVERITY.LOW', 0)}\")
+          "
+          fi
+
+      - name: Upload Bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+
+  pip-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - run: uv python install 3.14
+      - run: uv sync --frozen --dev
+
+      - name: Run pip-audit
+        run: uv run pip-audit --desc
+
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:python"

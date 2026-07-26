@@ -1,19 +1,22 @@
-import os
-import sys
+import contextvars
 import json
 import logging
-import contextvars
-from datetime import datetime, timezone
-from typing import Optional
+import os
+import sys
+from datetime import UTC, datetime
 
-request_id_var: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar("request_id", default=None)
-tenant_id_var: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar("tenant_id", default=None)
+request_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "request_id", default=None
+)
+tenant_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "tenant_id", default=None
+)
 
 
 class JSONFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         log_entry = {
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "msg": record.getMessage(),
@@ -30,9 +33,19 @@ class JSONFormatter(logging.Formatter):
         if record.exc_info and record.exc_info[0]:
             log_entry["exception"] = self.formatException(record.exc_info)
 
-        for key in ("route", "method", "status_code", "duration_ms",
-                     "compile_ms", "validate_ms", "execute_ms",
-                     "cache_hit", "rows", "target_table", "error_code"):
+        for key in (
+            "route",
+            "method",
+            "status_code",
+            "duration_ms",
+            "compile_ms",
+            "validate_ms",
+            "execute_ms",
+            "cache_hit",
+            "rows",
+            "target_table",
+            "error_code",
+        ):
             val = getattr(record, key, None)
             if val is not None:
                 log_entry[key] = val
@@ -55,9 +68,7 @@ def setup_logging():
     if log_format == "json":
         handler.setFormatter(JSONFormatter())
     else:
-        handler.setFormatter(logging.Formatter(
-            "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-        ))
+        handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
 
     root.addHandler(handler)
 

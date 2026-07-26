@@ -1,11 +1,12 @@
-import pytest
 from fastapi.testclient import TestClient
+
 from app.main import app
 
 client = TestClient(app)
 
 
 # --- SECURITY & AUTHENTICATION INTEGRATION TESTS ---
+
 
 def test_compile_endpoint_enforces_auth_when_enabled(monkeypatch):
     monkeypatch.setenv("REQUIRE_AUTH", "true")
@@ -19,7 +20,9 @@ def test_compile_endpoint_rejects_invalid_api_key(monkeypatch):
     monkeypatch.setenv("REQUIRE_AUTH", "true")
     headers = {"X-Predicate-API-Key": "pred_invalid_fake_key_12345"}
 
-    response = client.post("/api/v1/query/compile", json={"prompt": "Show all orders"}, headers=headers)
+    response = client.post(
+        "/api/v1/query/compile", json={"prompt": "Show all orders"}, headers=headers
+    )
     assert response.status_code == 403
     assert "invalid or deactivated" in response.json()["detail"].lower()
 
@@ -34,13 +37,14 @@ def test_compile_endpoint_accepts_valid_api_key(monkeypatch, mocker):
         "projection_columns": [],
         "filters": [],
         "sorting": {"column": "", "direction": "asc"},
-        "pagination": {"limit": 20, "offset": 0}
+        "pagination": {"limit": 20, "offset": 0},
     }
 
     mock_svc = mocker.MagicMock()
     mock_svc.translate_text_to_blueprint.return_value = mock_blueprint
 
     import app.main as main_module
+
     main_module.agent_service = None
     main_module.agent_service = mock_svc
 
@@ -48,13 +52,16 @@ def test_compile_endpoint_accepts_valid_api_key(monkeypatch, mocker):
     mocker.patch("app.database.metrics.get_redis_client", return_value=None)
     mocker.patch("app.main.execute_secure_query", return_value=([], 0.0))
 
-    response = client.post("/api/v1/query/compile", json={"prompt": "Show all customers"}, headers=headers)
+    response = client.post(
+        "/api/v1/query/compile", json={"prompt": "Show all customers"}, headers=headers
+    )
     assert response.status_code == 200
     assert response.json()["status"] == "success"
     assert "customers" in response.json()["compiled_sql"]
 
 
 # --- ASYNCHRONOUS EXPORT TASK QUEUE TESTS ---
+
 
 def test_async_export_endpoint_requires_valid_prompt(monkeypatch):
     monkeypatch.setenv("REQUIRE_AUTH", "false")
@@ -72,6 +79,7 @@ def test_async_export_endpoint_queues_task_successfully(monkeypatch, mocker):
     mock_svc.translate_text_to_blueprint.return_value = mock_blueprint
 
     import app.main as main_module
+
     main_module.agent_service = mock_svc
 
     mock_task = mocker.MagicMock()

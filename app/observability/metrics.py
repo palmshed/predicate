@@ -1,8 +1,8 @@
 import os
-import time
-import threading
 import resource
-from typing import Dict, List
+import threading
+import time
+
 from app.observability.logging import get_logger
 
 logger = get_logger("metrics")
@@ -11,9 +11,9 @@ logger = get_logger("metrics")
 class _MetricsStore:
     def __init__(self):
         self._lock = threading.Lock()
-        self._counters: Dict[str, int] = {}
-        self._histograms: Dict[str, List[float]] = {}
-        self._gauges: Dict[str, float] = {}
+        self._counters: dict[str, int] = {}
+        self._histograms: dict[str, list[float]] = {}
+        self._gauges: dict[str, float] = {}
         self._started_at = time.time()
 
     def inc(self, name: str, value: int = 1):
@@ -40,11 +40,20 @@ class _MetricsStore:
         with self._lock:
             return self._counters.get(name, 0)
 
-    def get_histogram(self, name: str) -> Dict[str, float]:
+    def get_histogram(self, name: str) -> dict[str, float]:
         with self._lock:
             vals = self._histograms.get(name, [])
         if not vals:
-            return {"count": 0, "sum": 0, "min": 0, "avg": 0, "p50": 0, "p95": 0, "p99": 0, "max": 0}
+            return {
+                "count": 0,
+                "sum": 0,
+                "min": 0,
+                "avg": 0,
+                "p50": 0,
+                "p95": 0,
+                "p99": 0,
+                "max": 0,
+            }
         sorted_vals = sorted(vals)
         count = len(sorted_vals)
         return {
@@ -97,9 +106,13 @@ class _MetricsStore:
             sorted_vals = sorted(vals)
             count = len(sorted_vals)
             lines.append(f"# TYPE predicate_{safe} summary")
-            lines.append(f"predicate_{safe}{{quantile=\"0.5\"}} {sorted_vals[int(count * 0.5)]:.2f}")
-            lines.append(f"predicate_{safe}{{quantile=\"0.95\"}} {sorted_vals[int(count * 0.95)]:.2f}")
-            lines.append(f"predicate_{safe}{{quantile=\"0.99\"}} {sorted_vals[int(count * 0.99)]:.2f}")
+            lines.append(f'predicate_{safe}{{quantile="0.5"}} {sorted_vals[int(count * 0.5)]:.2f}')
+            lines.append(
+                f'predicate_{safe}{{quantile="0.95"}} {sorted_vals[int(count * 0.95)]:.2f}'
+            )
+            lines.append(
+                f'predicate_{safe}{{quantile="0.99"}} {sorted_vals[int(count * 0.99)]:.2f}'
+            )
             lines.append(f"predicate_{safe}_sum {sum(sorted_vals):.2f}")
             lines.append(f"predicate_{safe}_count {count}")
 

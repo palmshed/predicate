@@ -22,7 +22,7 @@
 
     <div class="hero hero-short">
       <div class="hero-content">
-        <h1>Support</h1>
+        <h1>Support v1.0.0</h1>
         <p>Setup guide, design rationale, and troubleshooting. If something is missing, <a href="https://github.com/palmshed/predicate/issues">open an issue</a>.</p>
       </div>
     </div>
@@ -33,18 +33,26 @@
         <pre><code>Python 3.14+ (or Docker)
 PostgreSQL 15+ (or Docker)
 Redis 7+ (or Docker)
-LLM API key (OpenRouter free tier or OpenAI)</code></pre>
+LLM API key (OpenRouter free tier or OpenAI)
+uv package manager</code></pre>
       </section>
 
       <section>
         <h2>Environment</h2>
-        <pre><code>LLM_PROVIDER         "openai" or "openrouter". Default: openrouter.
-LLM_MODEL            Model ID. Default: nvidia/nemotron-3-super-120b-a12b:free.
-OPENROUTER_API_KEY   Required if LLM_PROVIDER=openrouter.
-OPENAI_API_KEY       Required if LLM_PROVIDER=openai.
-REQUIRE_AUTH         Optional. Set to "true" to enable API key validation.
-DATABASE_URL         Optional. PostgreSQL connection string.
-REDIS_URL            Optional. Redis connection string.</code></pre>
+        <pre><code>LLM_PROVIDER            "openai" or "openrouter". Default: openrouter.
+LLM_MODEL               Model ID. Default: nvidia/nemotron-3-super-120b-a12b:free.
+OPENROUTER_API_KEY      Required if LLM_PROVIDER=openrouter.
+OPENAI_API_KEY          Required if LLM_PROVIDER=openai.
+REQUIRE_AUTH            Set to "true" to enable API key validation. Default: false.
+DATABASE_URL            PostgreSQL connection string.
+DATABASE_READONLY_URL   Optional. Read-only replica for queries.
+REDIS_URL               Redis connection string.
+CSRF_SECRET_KEY         Optional. Secret for signing CSRF cookies.
+ALLOWED_ORIGINS         Optional. Comma-separated CORS origins.
+MAX_PROMPT_LENGTH       Max prompt chars. Default: 2000.
+QUERY_TIMEOUT_SECONDS   Query execution timeout. Default: 30.
+LOG_LEVEL               Logging level. Default: INFO.
+LOG_FORMAT              "json" or "text". Default: json.</code></pre>
       </section>
 
       <section>
@@ -70,6 +78,9 @@ docker-compose up --build</code></pre>
           <li><strong>Server-side tenant injection</strong>, <code>tenant_id</code> is extracted from the validated API key and injected into every WHERE clause. The AI cannot override this.</li>
           <li><strong>Pure compiler function</strong>, the SQL builder is a stateless function with no I/O. This makes it trivially testable and allows linear scaling across CPU cores.</li>
           <li><strong>Schema whitelist</strong>, only tables and columns listed in <code>ALLOWED_SCHEMA</code> can be queried. Unknown fields are rejected before compilation.</li>
+          <li><strong>Security headers</strong>, responses include X-Frame-Options DENY, HSTS, CSP, nosniff, Referrer-Policy, and Permissions-Policy.</li>
+          <li><strong>CSRF protection</strong>, browser requests are validated via a signed cookie + header match. The cookie is HttpOnly and Secure.</li>
+          <li><strong>Observability</strong>, structured JSON logging, X-Request-ID correlation, TraceContext spans, and Prometheus metrics at <code>/metrics</code>.</li>
           <li><strong>Audit everything</strong>, every prompt, query, and result is logged to PostgreSQL. Full compliance trail.</li>
         </ul>
       </section>
@@ -91,6 +102,11 @@ docker-compose up --build</code></pre>
               <td data-label="Resolution">Include <code>X-Predicate-API-Key</code> header. Check key in mock registry.</td>
             </tr>
             <tr>
+              <td data-label="Symptom">403 Forbidden</td>
+              <td data-label="Cause">CSRF token missing, expired, or mismatched</td>
+              <td data-label="Resolution">Ensure cookies are enabled. If behind a proxy, check that the <code>X-CSRF-Token</code> header matches the signed cookie. Set <code>CSRF_SECRET_KEY</code> for persistence.</td>
+            </tr>
+            <tr>
               <td data-label="Symptom">429 Too Many Requests</td>
               <td data-label="Cause">Rate limit exceeded for your tier</td>
               <td data-label="Resolution">Wait for the window to reset. Sandbox: 60 RPM, Growth: 20 RPM, Enterprise: 100 RPM.</td>
@@ -106,12 +122,34 @@ docker-compose up --build</code></pre>
               <td data-label="Resolution">Check LLM API key in .env. The Pydantic schema constrains output to valid blueprints.</td>
             </tr>
             <tr>
+              <td data-label="Symptom">Query timeout</td>
+              <td data-label="Cause">Execution exceeded <code>QUERY_TIMEOUT_SECONDS</code></td>
+              <td data-label="Resolution">Increase timeout or optimize the query. Default is 30 seconds.</td>
+            </tr>
+            <tr>
+              <td data-label="Symptom">Export stuck in PROCESSING</td>
+              <td data-label="Cause">Celery worker not running</td>
+              <td data-label="Resolution">Start Celery: <code>celery -A app.worker worker --loglevel=info</code></td>
+            </tr>
+            <tr>
               <td data-label="Symptom">Redis connection error</td>
               <td data-label="Cause">Redis not running</td>
               <td data-label="Resolution">Start Redis via Docker Compose, or caching falls back to no-cache mode.</td>
             </tr>
+            <tr>
+              <td data-label="Symptom">DB connection pool exhausted</td>
+              <td data-label="Cause">Too many concurrent queries</td>
+              <td data-label="Resolution">Increase <code>maxconn</code> in <code>connection.py</code> or reduce concurrency.</td>
+            </tr>
           </tbody>
         </table>
+      </section>
+
+      <section>
+        <h2>Health endpoints</h2>
+        <pre><code>GET /health    → {"status": "healthy", "checks": {"db": true, "redis": true}, ...}
+GET /ready     → 200 if all checks pass, 503 otherwise
+GET /metrics   → Prometheus text format</code></pre>
       </section>
       <p class="feedback">Found something unexpected? <a href="https://github.com/palmshed/predicate/issues">Report an issue</a>.</p>
     </div>

@@ -1,4 +1,5 @@
 import pytest
+
 from app.compiler.sql_builder import build_secure_query
 
 
@@ -6,11 +7,9 @@ def test_successful_sql_generation():
     mock_blueprint = {
         "target_table": "orders",
         "projection_columns": ["id", "total_amount"],
-        "filters": [
-            {"column": "order_status", "operator": "equals", "value": "completed"}
-        ],
+        "filters": [{"column": "order_status", "operator": "equals", "value": "completed"}],
         "sorting": {"column": "total_amount", "direction": "desc"},
-        "pagination": {"limit": 5}
+        "pagination": {"limit": 5},
     }
 
     sql, params = build_secure_query(mock_blueprint, tenant_id="tenant_alpha")
@@ -26,7 +25,7 @@ def test_successful_sql_generation():
 def test_sql_injection_and_whitelist_defense():
     malicious_blueprint = {
         "target_table": "users; DROP TABLE customers; --",
-        "projection_columns": ["password"]
+        "projection_columns": ["password"],
     }
 
     with pytest.raises(ValueError) as excinfo:
@@ -36,10 +35,7 @@ def test_sql_injection_and_whitelist_defense():
 
 
 def test_wildcard_fallback_on_empty_projections():
-    minimal_blueprint = {
-        "target_table": "products",
-        "projection_columns": []
-    }
+    minimal_blueprint = {"target_table": "products", "projection_columns": []}
 
     sql, _ = build_secure_query(minimal_blueprint, tenant_id="tenant_alpha")
     assert "SELECT products.* FROM products" in sql
@@ -52,9 +48,9 @@ def test_multiple_filters_compilation():
         "projection_columns": ["name", "email"],
         "filters": [
             {"column": "country", "operator": "equals", "value": "Germany"},
-            {"column": "status", "operator": "equals", "value": "active"}
+            {"column": "status", "operator": "equals", "value": "active"},
         ],
-        "pagination": {"limit": 10}
+        "pagination": {"limit": 10},
     }
 
     sql, params = build_secure_query(blueprint, tenant_id="tenant_alpha")
@@ -69,9 +65,7 @@ def test_multiple_filters_compilation():
 def test_contains_operator_uses_ilike():
     blueprint = {
         "target_table": "customers",
-        "filters": [
-            {"column": "name", "operator": "contains", "value": "john"}
-        ]
+        "filters": [{"column": "name", "operator": "contains", "value": "john"}],
     }
 
     sql, params = build_secure_query(blueprint, tenant_id="tenant_alpha")
@@ -84,9 +78,7 @@ def test_contains_operator_uses_ilike():
 def test_invalid_column_ignored():
     blueprint = {
         "target_table": "orders",
-        "filters": [
-            {"column": "nonexistent_column", "operator": "equals", "value": "test"}
-        ]
+        "filters": [{"column": "nonexistent_column", "operator": "equals", "value": "test"}],
     }
 
     sql, params = build_secure_query(blueprint, tenant_id="tenant_alpha")
@@ -96,10 +88,7 @@ def test_invalid_column_ignored():
 
 
 def test_limit_capped_at_100():
-    blueprint = {
-        "target_table": "orders",
-        "pagination": {"limit": 500}
-    }
+    blueprint = {"target_table": "orders", "pagination": {"limit": 500}}
 
     sql, _ = build_secure_query(blueprint, tenant_id="tenant_alpha")
 
@@ -107,10 +96,7 @@ def test_limit_capped_at_100():
 
 
 def test_asc_sorting():
-    blueprint = {
-        "target_table": "products",
-        "sorting": {"column": "price", "direction": "asc"}
-    }
+    blueprint = {"target_table": "products", "sorting": {"column": "price", "direction": "asc"}}
 
     sql, _ = build_secure_query(blueprint, tenant_id="tenant_alpha")
 
@@ -121,9 +107,7 @@ def test_cross_table_join():
     blueprint = {
         "target_table": "orders",
         "projection_columns": ["id", "total_amount"],
-        "filters": [
-            {"column": "customers.country", "operator": "equals", "value": "Germany"}
-        ]
+        "filters": [{"column": "customers.country", "operator": "equals", "value": "Germany"}],
     }
 
     sql, params = build_secure_query(blueprint, tenant_id="tenant_alpha")
@@ -138,7 +122,7 @@ def test_cross_table_projection():
     blueprint = {
         "target_table": "orders",
         "projection_columns": ["id", "customers.country"],
-        "pagination": {"limit": 5}
+        "pagination": {"limit": 5},
     }
 
     sql, _ = build_secure_query(blueprint, tenant_id="tenant_alpha")
@@ -164,9 +148,7 @@ def test_cross_table_tenant_isolation_both_tables():
     blueprint = {
         "target_table": "orders",
         "projection_columns": ["id", "customers.country"],
-        "filters": [
-            {"column": "customers.country", "operator": "equals", "value": "Germany"}
-        ]
+        "filters": [{"column": "customers.country", "operator": "equals", "value": "Germany"}],
     }
 
     sql, params = build_secure_query(blueprint, tenant_id="tenant_beta")
