@@ -18,6 +18,12 @@ DIR = os.path.dirname(os.path.abspath(__file__))
 class DevServer(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         path = self.translate_path(self.path)
+        if os.path.isdir(path):
+            for index in ("index.html", "index.htm"):
+                index_path = os.path.join(path, index)
+                if os.path.isfile(index_path):
+                    path = index_path
+                    break
         if path.endswith(".html") and os.path.isfile(path):
             with open(path, encoding="utf-8") as f:
                 content = f.read()
