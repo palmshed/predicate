@@ -1,5 +1,5 @@
 <p align="center">
-  <img src=".github/website/hero.png" alt="Predicate AI Engine" width="900">
+  <img src=".github/website/hero.svg" alt="Predicate AI Engine" width="900">
 </p>
 
 <p align="center">
@@ -233,6 +233,19 @@ alembic history
 ### Important Notes
 
 Since Predicate uses psycopg2 directly (not SQLAlchemy ORM), migrations must be written manually. The `autogenerate` command will create a stub that you fill with SQL operations.
+
+---
+
+## Hero Image
+
+The README hero is code-generated SVG. To update badges or text:
+
+```bash
+# Edit hero/badges.js, then:
+node hero/build.js
+```
+
+Badge definitions live in `hero/badges.js`. The build script outputs `.github/website/hero.svg`.
 
 ---
 
