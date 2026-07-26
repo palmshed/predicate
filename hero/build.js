@@ -29,21 +29,29 @@ function buildBadges() {
   }).join("");
 }
 
-function buildLogoPath() {
+function buildLogo() {
+  const logoX = PADDING_X;
+  const logoY = PADDING_Y - 5;
+  const logoSize = 70;
+
   return `
-    <circle cx="${PADDING_X + 30}" cy="${PADDING_Y + 30}" r="32" fill="#24d455" fill-opacity="0.12"/>
-    <path d="M${PADDING_X + 22} ${PADDING_Y + 18}c0-4.4-6.2-8-14-8s-14 3.6-14 8h4l2-2 2 2h8" stroke="#24d455" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M${PADDING_X + 22} ${PADDING_Y + 16.3}A14.6 14.6 0 0 1 ${PADDING_X + 28} ${PADDING_Y + 14}c7.6 0 14 5.6 14 14h-6l-2-2-2 2h-6" stroke="#24d455" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M${PADDING_X + 2.7} ${PADDING_Y + 21.8}c-5.4 5.4-5.8 13.7-.9 18.6l10.6-10.6 1.8-1.8 1.8-1.8 5.3-5.3c-4.9-4.9-13.2-4.5-18.6.9" stroke="#24d455" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M${PADDING_X + 15} ${PADDING_Y + 33.8}c1.2 6.3-.4 11.3-2.5 16.3h10c5-13.8-1.3-30-2.5-35" stroke="#24d455" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+  <g transform="translate(${logoX}, ${logoY}) scale(${logoSize / 24})">
+    <circle cx="12" cy="12" r="12" fill="#24d455" fill-opacity="0.12"/>
+    <path d="M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h2l1-1 1 1h4" stroke="#24d455" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-3l-1-1-1 1h-3" stroke="#24d455" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M5.89 9.71c-2.15 2.15-2.3 5.47-.35 7.43l4.24-4.25.7-.7.71-.71 2.12-2.12c-1.95-1.96-5.27-1.8-7.42.35" stroke="#24d455" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M11 15.5c.5 2.5-.17 4.5-1 6.5h4c2-5.5-.5-12-1-14" stroke="#24d455" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>`;
 }
 
 function build() {
+  const textX = PADDING_X + 80;
+
   const svg = `<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="${WIDTH}" height="${HEIGHT}" fill="#0D1117"/>
-  ${buildLogoPath()}
-  <text x="${PADDING_X + 80}" y="${PADDING_Y + 22}" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="36" font-weight="600" fill="#FFFFFF">Predicate</text>
-  <text x="${PADDING_X + 80}" y="${PADDING_Y + 48}" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="16" fill="#8B949E">Natural Language to SQL Engine</text>
+  ${buildLogo()}
+  <text x="${textX}" y="${PADDING_Y + 22}" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="36" font-weight="600" fill="#FFFFFF">Predicate</text>
+  <text x="${textX}" y="${PADDING_Y + 48}" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="16" fill="#8B949E">Natural Language to SQL Engine</text>
   ${buildBadges()}
 </svg>`;
 
