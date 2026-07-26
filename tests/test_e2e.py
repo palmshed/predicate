@@ -82,8 +82,8 @@ class TestHistory:
         page.locator("body").click()
         page.wait_for_timeout(300)
         page.keyboard.press("h")
-        page.wait_for_selector("[aria-label=\"Query history\"]", timeout=10000)
-        history_panel = page.locator("[aria-label=\"Query history\"]")
+        page.wait_for_selector('[aria-label="Query history"]', timeout=10000)
+        history_panel = page.locator('[aria-label="Query history"]')
         assert history_panel.locator("text=No queries yet").count() == 0
 
 
