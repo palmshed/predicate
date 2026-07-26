@@ -17,7 +17,17 @@ DIR = os.path.dirname(os.path.abspath(__file__))
 
 class DevServer(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
+        parts = self.path.split("?", 1)
+        clean_path = parts[0]
         path = self.translate_path(self.path)
+        if os.path.isdir(path) and not clean_path.endswith("/"):
+            new_path = clean_path + "/"
+            if len(parts) > 1:
+                new_path += "?" + parts[1]
+            self.send_response(302)
+            self.send_header("Location", new_path)
+            self.end_headers()
+            return
         if os.path.isdir(path):
             for index in ("index.html", "index.htm"):
                 index_path = os.path.join(path, index)
