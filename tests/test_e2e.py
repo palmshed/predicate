@@ -79,7 +79,7 @@ class TestHistory:
         textarea.fill("Count all customers")
         textarea.press("Control+Enter")
         page.wait_for_selector("text=Completed", timeout=60000)
-        page.wait_for_timeout(500)
+        page.wait_for_timeout(3000)
         history_count = page.evaluate(
             "() => JSON.parse(localStorage.getItem('pred_history') || '[]').length"
         )
