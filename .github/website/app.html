@@ -50,7 +50,7 @@
           <li><strong>JOIN graph</strong>, <code>RELATIONSHIP_GRAPH</code> defines allowed foreign key paths.</li>
           <li><strong>Aggregation whitelist</strong>, <code>ALLOWED_AGGREGATIONS</code> controls permitted aggregate functions.</li>
           <li><strong>Query timeouts</strong>, configurable per-request, default 30 seconds.</li>
-          <li><strong>Input validation</strong>, Pydantic models constrain AI output to prevent injection.</li>
+          <li><strong>Input validation</strong>, Pydantic models constrain AI output to safe schemas.</li>
           <li><strong>Read-only DB role</strong>, <code>predicate_reader</code> cannot write, only <code>INSERT</code> into audit_logs.</li>
           <li><strong>Security headers</strong>, X-Frame-Options DENY, HSTS, CSP, nosniff, Referrer-Policy, Permissions-Policy.</li>
           <li><strong>CSRF protection</strong>, signed cookie with Secure flag for browser requests.</li>
