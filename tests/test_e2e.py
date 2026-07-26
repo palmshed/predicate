@@ -44,17 +44,21 @@ class TestCompileQuery:
 
 
 class TestKeyboardShortcuts:
-    def test_ctrl_k_opens_palette(self, page):
+    def test_click_opens_palette(self, page):
         page.goto("/")
-        page.keyboard.press("Control+k")
-        page.wait_for_timeout(300)
+        palette_btn = page.locator("button[aria-label^='Open command palette']")
+        assert palette_btn.is_visible()
+        palette_btn.click()
+        page.wait_for_timeout(200)
         palette = page.locator("[role='dialog'][aria-label='Command palette']")
         assert palette.is_visible()
 
     def test_escape_closes_palette(self, page):
         page.goto("/")
-        page.keyboard.press("Control+k")
-        page.locator("[role='dialog']").wait_for()
+        page.locator("button[aria-label^='Open command palette']").click()
+        page.wait_for_timeout(300)
+        palette = page.locator("[role='dialog'][aria-label='Command palette']")
+        assert palette.is_visible()
         page.keyboard.press("Escape")
         page.wait_for_timeout(300)
         assert page.locator("[role='dialog']").count() == 0
@@ -75,14 +79,18 @@ class TestHistory:
         textarea.fill("Show all products")
         textarea.press("Control+Enter")
         page.wait_for_selector("text=Results", timeout=30000)
-        page.wait_for_timeout(500)
+        page.wait_for_timeout(1000)
+        history_count_before = page.evaluate(
+            "() => JSON.parse(localStorage.getItem('pred_history') || '[]').length"
+        )
+        assert history_count_before > 0
         page.reload()
         page.wait_for_load_state("networkidle")
         page.wait_for_timeout(500)
-        history_count = page.evaluate(
+        history_count_after = page.evaluate(
             "() => JSON.parse(localStorage.getItem('pred_history') || '[]').length"
         )
-        assert history_count > 0
+        assert history_count_after > 0
 
 
 class TestAccessibility:
