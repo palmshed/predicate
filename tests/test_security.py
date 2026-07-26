@@ -7,7 +7,7 @@ from app.auth.rate_limiter import check_rate_limit
 def test_auth_disabled_by_default(monkeypatch):
     monkeypatch.setenv("REQUIRE_AUTH", "false")
     context = validate_api_key(api_key=None)
-    assert context["tenant_id"] == "local_dev_tenant"
+    assert context["tenant_id"] == "tenant_alpha"
     assert context["plan"] == "sandbox"
 
 
