@@ -9,11 +9,12 @@
 ## Table of Contents
 
 1. [System Overview](#1-system-overview)
-2. [Trust Boundaries](#2-trust-boundaries)
-3. [Threat Categories](#3-threat-categories)
-4. [Mitigations Implemented](#4-mitigations-implemented)
-5. [Residual Risks](#5-residual-risks)
-6. [Recommendations for Production](#6-recommendations-for-production)
+2. [Security Assumptions](#2-security-assumptions)
+3. [Trust Boundaries](#3-trust-boundaries)
+4. [Threat Categories](#4-threat-categories)
+5. [Mitigations Implemented](#5-mitigations-implemented)
+6. [Residual Risks](#6-residual-risks)
+7. [Recommendations for Production](#7-recommendations-for-production)
 
 ---
 
@@ -92,7 +93,26 @@ The `/api/v1/export/async` endpoint dispatches heavy export tasks via Celery. Th
 
 ---
 
-## 2. Trust Boundaries
+## 2. Security Assumptions
+
+Predicate's security model assumes:
+
+- The compiler is the only component permitted to generate SQL.
+- All SQL generation uses parameterized queries.
+- Only whitelisted tables, columns, and relationships are compiled.
+- The execution role has read-only database permissions.
+- Tenant filters are enforced by the compiler and cannot be overridden by the language model.
+- The language model is treated as an untrusted parser, not an authority on database access.
+
+The core principle:
+
+> **The LLM is untrusted. The compiler is trusted.**
+
+Predicate prevents classic SQL injection by design through a compiler-based architecture. Natural language is translated into a validated JSON blueprint, not SQL. The compiler generates SQL only from a schema whitelist and always uses parameterized queries. Combined with a read-only database role, automatic tenant isolation, query timeouts, authentication, and rate limiting, these layers provide defense in depth.
+
+---
+
+## 3. Trust Boundaries
 
 ### 2.1 Boundary Map
 
@@ -159,7 +179,7 @@ Tenant isolation is enforced at multiple layers:
 
 ---
 
-## 3. Threat Categories
+## 4. Threat Categories
 
 ### 3.1 Injection Attacks
 
@@ -294,7 +314,7 @@ Tenant isolation is enforced at multiple layers:
 
 ---
 
-## 4. Mitigations Implemented
+## 5. Mitigations Implemented
 
 ### 4.1 Security Headers
 
@@ -383,7 +403,7 @@ Implemented in `app/middleware/security.py:43-122`:
 
 ---
 
-## 5. Residual Risks
+## 6. Residual Risks
 
 ### 5.1 LLM Provider Data Access
 
@@ -441,7 +461,7 @@ Implemented in `app/middleware/security.py:43-122`:
 
 ---
 
-## 6. Recommendations for Production
+## 7. Recommendations for Production
 
 ### 6.1 Authentication and Access Control
 
