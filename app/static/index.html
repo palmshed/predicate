@@ -40,6 +40,7 @@
             const [downloadUrl, setDownloadUrl] = React.useState(null);
             const [schemaOpen, setSchemaOpen] = React.useState(false);
             const [expandedTable, setExpandedTable] = React.useState(null);
+            const [hasRun, setHasRun] = React.useState(false);
 
             const executeQuery = async (e) => {
                 e.preventDefault();
@@ -54,6 +55,7 @@
                     });
                     const data = await res.json();
                     setResponse(data);
+                    setHasRun(true);
                     fetchMetrics();
                 } catch (err) {
                     setResponse({ error: "Engine unreachable." });
@@ -169,7 +171,7 @@
                                     <textarea
                                         value={prompt}
                                         onChange={(e) => setPrompt(e.target.value)}
-                                        placeholder={"Describe the data you need...\n\nExample:\nShow active customers in Germany"}
+                                        placeholder={"Describe the data you need.\n\nExample\nShow active customers in Germany"}
                                         rows={6}
                                         style={{ width: "100%", padding: "10px 12px", fontSize: "13px", lineHeight: "1.5", border: "1px solid #E5E7EB", borderRadius: "6px", background: "#FAFAFA", color: "#111827", outline: "none", resize: "none" }}
                                     />
@@ -250,7 +252,7 @@
                                         key={tab}
                                         onClick={() => setActiveTab(tab)}
                                         style={{
-                                            padding: "12px 24px", fontSize: "12px", fontWeight: 500, border: "none", borderBottom: activeTab === tab ? "2px solid #24d455" : "2px solid transparent", background: "transparent", cursor: "pointer",
+                                            padding: "12px 24px", fontSize: "12px", fontWeight: 500, border: "none", borderBottom: activeTab === tab ? "3px solid #24d455" : "3px solid transparent", background: "transparent", cursor: "pointer",
                                             color: activeTab === tab ? "#111827" : "#6B7280"
                                         }}
                                     >
@@ -267,8 +269,8 @@
                             </div>
 
                             <div style={{ flex: 1, overflow: "auto", background: "#FFFFFF" }}>
-                                {!response && !loading && (
-                                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", height: "100%", paddingBottom: "80px" }}>
+                                {!response && !loading && !hasRun && (
+                                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", height: "100%", paddingBottom: "180px" }}>
                                         <div style={{ textAlign: "center" }}>
                                             <div style={{ fontSize: "36px", marginBottom: "16px", opacity: 0.15 }}>
                                                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
@@ -278,18 +280,19 @@
                                                     <path d="M11 15.5c.5 2.5-.17 4.5-1 6.5h4c2-5.5-.5-12-1-14"/>
                                                 </svg>
                                             </div>
-                                            <div style={{ fontSize: "14px", fontWeight: 500, color: "#6B7280", marginBottom: "16px" }}>Ready</div>
-                                            <div style={{ fontSize: "12px", color: "#9CA3AF", marginBottom: "8px" }}>Try asking:</div>
-                                            <div style={{ display: "flex", flexDirection: "column", gap: "6px", alignItems: "center" }}>
+                                            <div style={{ fontSize: "14px", fontWeight: 500, color: "#6B7280", marginBottom: "20px" }}>Ready</div>
+                                            <div style={{ fontSize: "11px", color: "#9CA3AF", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Try asking</div>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" }}>
                                                 {examplePrompts.map((ex) => (
                                                     <button
                                                         key={ex}
                                                         onClick={() => setPrompt(ex)}
-                                                        style={{ fontSize: "12px", color: "#6B7280", background: "none", border: "none", cursor: "pointer", padding: "4px 8px", borderRadius: "4px", transition: "background 0.1s" }}
-                                                        onMouseEnter={(e) => e.target.style.background = "#F3F4F6"}
-                                                        onMouseLeave={(e) => e.target.style.background = "none"}
+                                                        style={{ fontSize: "12px", color: "#374151", background: "#F9FAFB", border: "1px solid #F3F4F6", cursor: "pointer", padding: "8px 16px", borderRadius: "20px", transition: "all 0.15s", display: "flex", alignItems: "center", gap: "8px" }}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.background = "#F3F4F6"; e.currentTarget.style.borderColor = "#E5E7EB"; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.background = "#F9FAFB"; e.currentTarget.style.borderColor = "#F3F4F6"; }}
                                                     >
                                                         {ex}
+                                                        <span style={{ fontSize: "10px", color: "#9CA3AF" }}>&rarr;</span>
                                                     </button>
                                                 ))}
                                             </div>
