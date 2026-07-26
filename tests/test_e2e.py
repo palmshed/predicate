@@ -76,9 +76,9 @@ class TestHistory:
     def test_query_appears_in_history(self, page):
         page.goto("/")
         textarea = page.locator("textarea")
-        textarea.fill("Show all products")
+        textarea.fill("Count all customers")
         textarea.press("Control+Enter")
-        page.wait_for_selector("text=SELECT", timeout=30000)
+        page.wait_for_selector("text=SQL", timeout=30000)
         page.wait_for_timeout(500)
         history_count = page.evaluate(
             "() => JSON.parse(localStorage.getItem('pred_history') || '[]').length"
