@@ -1,410 +1,1053 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Predicate</title>
+    <meta name="description" content="Natural language to SQL compilation workspace">
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #FAFAFA; color: #111827; height: 100vh; overflow: hidden; }
-        ::-webkit-scrollbar { width: 6px; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg-primary: #FAFAFA;
+            --bg-secondary: #FFFFFF;
+            --bg-tertiary: #F3F4F6;
+            --bg-hover: #F1F5F9;
+            --bg-active: #E5E7EB;
+            --border-primary: #E5E7EB;
+            --border-secondary: #F3F4F6;
+            --border-focus: #6B7280;
+            --text-primary: #111827;
+            --text-secondary: #374151;
+            --text-tertiary: #6B7280;
+            --text-muted: #9CA3AF;
+            --green: #16a34a;
+            --green-bg: #f0fdf4;
+            --green-border: #bbf7d0;
+            --amber: #d97706;
+            --amber-bg: #fffbeb;
+            --amber-border: #fde68a;
+            --red: #dc2626;
+            --red-bg: #fef2f2;
+            --red-border: #fecaca;
+            --overlay: rgba(0, 0, 0, 0.4);
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 8px;
+            --radius-xl: 12px;
+            --transition: 120ms ease-out;
+        }
+        [data-theme="dim"] {
+            --bg-primary: #1a1b26;
+            --bg-secondary: #24253a;
+            --bg-tertiary: #2f3044;
+            --bg-hover: #33344a;
+            --bg-active: #44456a;
+            --border-primary: #33344a;
+            --border-secondary: #2f3044;
+            --border-focus: #6b7280;
+            --text-primary: #e2e4e9;
+            --text-secondary: #c0c3d1;
+            --text-tertiary: #8b8fa7;
+            --text-muted: #5c5f77;
+            --green: #4ade80;
+            --green-bg: #1a2e1a;
+            --green-border: #2d5a2d;
+            --amber: #fbbf24;
+            --amber-bg: #2e2a1a;
+            --amber-border: #5a4d2d;
+            --red: #f87171;
+            --red-bg: #2e1a1a;
+            --red-border: #5a2d2d;
+            --overlay: rgba(0, 0, 0, 0.6);
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        [data-theme="dark"] {
+            --bg-primary: #0f0f14;
+            --bg-secondary: #16161e;
+            --bg-tertiary: #1e1e28;
+            --bg-hover: #252530;
+            --bg-active: #33334a;
+            --border-primary: #252530;
+            --border-secondary: #1e1e28;
+            --border-focus: #555570;
+            --text-primary: #d4d4e0;
+            --text-secondary: #a0a0b8;
+            --text-tertiary: #6b6b85;
+            --text-muted: #4a4a60;
+            --green: #4ade80;
+            --green-bg: #0f1f0f;
+            --green-border: #1a3a1a;
+            --amber: #fbbf24;
+            --amber-bg: #1f1a0f;
+            --amber-border: #3a2e1a;
+            --red: #f87171;
+            --red-bg: #1f0f0f;
+            --red-border: #3a1a1a;
+            --overlay: rgba(0, 0, 0, 0.75);
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+        }
+        html { font-size: 15px; -webkit-text-size-adjust: 100%; }
+        @media (min-width: 1400px) { html { font-size: 16px; } }
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            line-height: 1.5;
+        }
+        #root { height: 100%; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
-        textarea { font-family: 'Inter', sans-serif; }
-        pre, code { font-family: 'JetBrains Mono', monospace; }
+        ::-webkit-scrollbar-thumb { background: var(--border-primary); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+        textarea, input, button, select { font-family: inherit; font-size: inherit; }
+        pre, code, .mono { font-family: var(--font-mono); }
+        :focus-visible {
+            outline: 2px solid var(--border-focus);
+            outline-offset: 1px;
+            border-radius: var(--radius-sm);
+        }
         @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-        .tab-content { animation: fadeIn 0.15s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .fade-in { animation: fadeIn 0.12s ease-out; }
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border-width: 0; }
+        button { cursor: pointer; background: none; border: none; color: inherit; padding: 0; }
+        [aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        function PredicateWorkspace() {
-            const [prompt, setPrompt] = React.useState("");
-            const [loading, setLoading] = React.useState(false);
-            const [response, setResponse] = React.useState(null);
-            const [apiKey, setApiKey] = React.useState("pred_live_7f8a9b2c3d4e5f6g7h8i9j0k");
-            const [metrics, setMetrics] = React.useState(null);
-            const [activeTab, setActiveTab] = React.useState("SQL");
-            const [exporting, setExporting] = React.useState(false);
-            const [exportStatus, setExportStatus] = React.useState("");
-            const [exportProgress, setExportProgress] = React.useState(0);
-            const [downloadUrl, setDownloadUrl] = React.useState(null);
-            const [schemaOpen, setSchemaOpen] = React.useState(false);
-            const [expandedTable, setExpandedTable] = React.useState(null);
-            const [hasRun, setHasRun] = React.useState(false);
+        const { useState, useEffect, useRef, useCallback, useMemo, createContext, useContext, memo } = React;
 
-            const executeQuery = async (e) => {
-                e.preventDefault();
-                if (!prompt.trim()) return;
-                setLoading(true);
-                setResponse(null);
-                try {
-                    const res = await fetch("/api/v1/query/compile", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json", "X-Predicate-API-Key": apiKey },
-                        body: JSON.stringify({ prompt })
-                    });
-                    const data = await res.json();
-                    setResponse(data);
-                    setHasRun(true);
-                    fetchMetrics();
-                } catch (err) {
-                    setResponse({ error: "Engine unreachable." });
-                } finally {
-                    setLoading(false);
+        // ── Theme ──────────────────────────────────────────────────────────
+        const ThemeCtx = createContext();
+        function ThemeProvider({ children }) {
+            const [theme, setTheme] = useState(() => localStorage.getItem("pred_theme") || "light");
+            useEffect(() => {
+                document.documentElement.setAttribute("data-theme", theme);
+                localStorage.setItem("pred_theme", theme);
+            }, [theme]);
+            const cycle = useCallback(() => setTheme(t => t === "light" ? "dim" : t === "dim" ? "dark" : "light"), []);
+            return <ThemeCtx.Provider value={{ theme, setTheme, cycle }}>{children}</ThemeCtx.Provider>;
+        }
+
+        // ── History ────────────────────────────────────────────────────────
+        const HISTORY_KEY = "pred_history";
+        function loadHistory() {
+            try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }
+            catch { return []; }
+        }
+        function saveHistory(entry) {
+            const hist = loadHistory();
+            hist.unshift({ ...entry, ts: Date.now() });
+            if (hist.length > 50) hist.length = 50;
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
+        }
+
+        // ── Schema ─────────────────────────────────────────────────────────
+        const SCHEMA = {
+            customers: { cols: ["id", "name", "email", "country", "status"], label: "Customers" },
+            orders: { cols: ["id", "customer_id", "total_amount", "order_status", "purchase_date"], label: "Orders" },
+            products: { cols: ["id", "product_name", "price", "stock_count", "category"], label: "Products" },
+        };
+
+        // ── Keyboard Shortcuts ─────────────────────────────────────────────
+        const SHORTCUTS = [
+            { keys: "⌘K", action: "Command palette" },
+            { keys: "⌘Enter", action: "Compile query" },
+            { keys: "Esc", action: "Cancel / Close" },
+            { keys: "/", action: "Focus prompt" },
+            { keys: "1-5", action: "Switch tabs" },
+            { keys: "H", action: "Toggle history" },
+            { keys: "C", action: "Copy SQL" },
+            { keys: "E", action: "Export CSV" },
+            { keys: "?", action: "Shortcuts help" },
+            { keys: "T", action: "Cycle theme" },
+        ];
+
+        // ── Utility ────────────────────────────────────────────────────────
+        function getCsrfToken() {
+            const match = document.cookie.match(/_predicate_csrf=([^;]+)/);
+            return match ? decodeURIComponent(match[1]) : "";
+        }
+        function timeAgo(ts) {
+            const diff = Date.now() - ts;
+            if (diff < 60000) return "just now";
+            if (diff < 3600000) return `${Math.floor(diff/60000)}m ago`;
+            if (diff < 86400000) return `${Math.floor(diff/3600000)}h ago`;
+            const d = new Date(ts);
+            return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+        }
+
+        // ── Icons (accessible) ─────────────────────────────────────────────
+        function Icon({ d, size = 14, label, ...props }) {
+            return (
+                <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                    aria-hidden={label ? "false" : "true"} role={label ? "img" : undefined}
+                    aria-label={label} {...props}>
+                    {typeof d === "string" ? <path d={d} /> : d}
+                </svg>
+            );
+        }
+
+        // ── Tooltip ────────────────────────────────────────────────────────
+        function Tooltip({ children, text }) {
+            const [show, setShow] = useState(false);
+            const [pos, setPos] = useState({ x: 0, y: 0 });
+            const ref = useRef();
+            const enter = () => {
+                if (ref.current) {
+                    const r = ref.current.getBoundingClientRect();
+                    setPos({ x: r.left + r.width / 2, y: r.top - 6 });
                 }
+                setShow(true);
+            };
+            return (
+                <span ref={ref} onMouseEnter={enter} onMouseLeave={() => setShow(false)}
+                    onFocus={enter} onBlur={() => setShow(false)} style={{ position: "relative", display: "inline-flex" }}>
+                    {children}
+                    {show && (
+                        <span role="tooltip" style={{
+                            position: "fixed", left: pos.x, top: pos.y, transform: "translate(-50%, -100%)",
+                            padding: "3px 8px", fontSize: "11px", fontFamily: "var(--font-mono)",
+                            background: "var(--text-primary)", color: "var(--bg-primary)",
+                            borderRadius: "var(--radius-sm)", whiteSpace: "nowrap", pointerEvents: "none",
+                            zIndex: 9999, boxShadow: "var(--shadow-sm)"
+                        }}>{text}</span>
+                    )}
+                </span>
+            );
+        }
+
+        // ── Command Palette ────────────────────────────────────────────────
+        function CommandPalette({ open, onClose, actions }) {
+            const [query, setQuery] = useState("");
+            const inputRef = useRef();
+            const [selected, setSelected] = useState(0);
+
+            useEffect(() => {
+                if (open) { setQuery(""); setSelected(0); setTimeout(() => inputRef.current?.focus(), 50); }
+            }, [open]);
+
+            const filtered = useMemo(() => {
+                if (!query) return actions;
+                const q = query.toLowerCase();
+                return actions.filter(a => a.label.toLowerCase().includes(q) || (a.hint && a.hint.toLowerCase().includes(q)));
+            }, [query, actions]);
+
+            useEffect(() => { setSelected(0); }, [query]);
+
+            const exec = (i) => { filtered[i]?.onRun(); onClose(); };
+
+            const onKey = (e) => {
+                if (e.key === "ArrowDown") { e.preventDefault(); setSelected(s => Math.min(s + 1, filtered.length - 1)); }
+                else if (e.key === "ArrowUp") { e.preventDefault(); setSelected(s => Math.max(s - 1, 0)); }
+                else if (e.key === "Enter") { e.preventDefault(); exec(selected); }
+                else if (e.key === "Escape") { e.preventDefault(); onClose(); }
             };
 
-            const executeExport = async () => {
-                if (!prompt.trim()) return;
-                setExporting(true);
-                setDownloadUrl(null);
-                setExportStatus("QUEUED");
-                setExportProgress(0);
-                try {
-                    const res = await fetch("/api/v1/export/async", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json", "X-Predicate-API-Key": apiKey },
-                        body: JSON.stringify({ prompt })
-                    });
-                    const data = await res.json();
-                    if (data.task_id) pollExportStatus(data.task_id);
-                    else { setExportStatus("FAILED"); setExporting(false); }
-                } catch (err) {
-                    setExportStatus("FAILED");
-                    setExporting(false);
-                }
-            };
+            if (!open) return null;
+            return (
+                <div role="dialog" aria-label="Command palette" aria-modal="true"
+                    style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: "15vh", background: "var(--overlay)" }}
+                    onClick={onClose}>
+                    <div onClick={e => e.stopPropagation()} style={{
+                        width: "480px", maxWidth: "90vw", maxHeight: "360px",
+                        background: "var(--bg-secondary)", border: "1px solid var(--border-primary)",
+                        borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-lg)",
+                        display: "flex", flexDirection: "column", overflow: "hidden"
+                    }}>
+                        <div style={{ padding: "0 14px", borderBottom: "1px solid var(--border-secondary)", display: "flex", alignItems: "center", gap: "8px" }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                            </svg>
+                            <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={onKey}
+                                placeholder="Type a command…" aria-label="Search commands"
+                                style={{ flex: 1, padding: "10px 0", background: "transparent", border: "none", outline: "none", fontSize: "13px", color: "var(--text-primary)" }} />
+                            <kbd style={{ fontSize: "10px", padding: "2px 5px", background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)", borderRadius: "3px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>esc</kbd>
+                        </div>
+                        <ul role="listbox" aria-label="Commands" style={{ flex: 1, overflow: "auto", padding: "4px" }}>
+                            {filtered.map((a, i) => (
+                                <li key={a.id} role="option" aria-selected={i === selected}
+                                    onMouseEnter={() => setSelected(i)} onClick={() => exec(i)}
+                                    style={{
+                                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                                        padding: "8px 10px", borderRadius: "var(--radius-sm)", cursor: "pointer",
+                                        background: i === selected ? "var(--bg-hover)" : "transparent",
+                                        fontSize: "13px", color: "var(--text-primary)", transition: "background var(--transition)"
+                                    }}>
+                                    <span>{a.label}</span>
+                                    {a.hint && <span className="mono" style={{ fontSize: "11px", color: "var(--text-muted)" }}>{a.hint}</span>}
+                                </li>
+                            ))}
+                            {filtered.length === 0 && (
+                                <li style={{ padding: "20px", textAlign: "center", color: "var(--text-muted)", fontSize: "12px" }}>No commands found</li>
+                            )}
+                        </ul>
+                    </div>
+                </div>
+            );
+        }
 
-            const pollExportStatus = (taskId) => {
-                const interval = setInterval(async () => {
-                    try {
-                        const res = await fetch(`/api/v1/export/status/${taskId}`, {
-                            headers: { "X-Predicate-API-Key": apiKey }
-                        });
-                        const data = await res.json();
-                        setExportStatus(data.state);
-                        if (data.state === "PROCESSING" && data.meta) {
-                            setExportProgress(data.meta.progress || 10);
-                        } else if (data.state === "SUCCESS") {
-                            clearInterval(interval);
-                            const blob = new Blob([data.result.csv_payload], { type: "text/csv;charset=utf-8;" });
-                            setDownloadUrl(URL.createObjectURL(blob));
-                            setExporting(false);
-                            fetchMetrics();
-                        } else if (data.state === "FAILURE") {
-                            clearInterval(interval);
-                            setExporting(false);
-                        }
-                    } catch (err) {
-                        clearInterval(interval);
-                        setExportStatus("FAILED");
-                        setExporting(false);
+        // ── Shortcuts Dialog ───────────────────────────────────────────────
+        function ShortcutsDialog({ open, onClose }) {
+            if (!open) return null;
+            return (
+                <div role="dialog" aria-label="Keyboard shortcuts" aria-modal="true"
+                    style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--overlay)" }}
+                    onClick={onClose}>
+                    <div onClick={e => e.stopPropagation()} style={{
+                        width: "380px", maxWidth: "90vw", background: "var(--bg-secondary)",
+                        border: "1px solid var(--border-primary)", borderRadius: "var(--radius-lg)",
+                        boxShadow: "var(--shadow-lg)", padding: "20px"
+                    }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                            <h2 style={{ fontSize: "14px", fontWeight: 600 }}>Keyboard Shortcuts</h2>
+                            <button onClick={onClose} aria-label="Close shortcuts" style={{ padding: "4px", color: "var(--text-muted)" }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            {SHORTCUTS.map(s => (
+                                <div key={s.keys} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0" }}>
+                                    <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{s.action}</span>
+                                    <kbd style={{ fontSize: "11px", padding: "2px 6px", background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)", borderRadius: "3px", color: "var(--text-tertiary)", fontFamily: "var(--font-mono)" }}>{s.keys}</kbd>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // ── Schema Explorer ────────────────────────────────────────────────
+        function SchemaExplorer({ onInsertField }) {
+            const [open, setOpen] = useState({});
+            const [focused, setFocused] = useState(null);
+            const listRef = useRef();
+            const flatItems = useMemo(() => {
+                const items = [];
+                Object.entries(SCHEMA).forEach(([tbl, info]) => {
+                    items.push({ type: "table", table: tbl, label: info.label || tbl });
+                    if (open[tbl]) {
+                        info.cols.forEach(col => items.push({ type: "col", table: tbl, col, label: col }));
                     }
-                }, 1000);
+                });
+                return items;
+            }, [open]);
+
+            const onKey = (e) => {
+                const idx = flatItems.findIndex(i => i.label === focused);
+                if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    const next = flatItems[Math.min((idx === -1 ? 0 : idx + 1), flatItems.length - 1)];
+                    setFocused(next.label);
+                } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    const prev = flatItems[Math.max((idx === -1 ? 0 : idx - 1), 0)];
+                    setFocused(prev.label);
+                } else if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    const item = flatItems[idx];
+                    if (item?.type === "table") setOpen(o => ({ ...o, [item.table]: !o[item.table] }));
+                    else if (item?.type === "col") onInsertField?.(`${item.table}.${item.col}`);
+                } else if (e.key === "ArrowRight") {
+                    const item = flatItems[idx];
+                    if (item?.type === "table" && !open[item.table]) setOpen(o => ({ ...o, [item.table]: true }));
+                } else if (e.key === "ArrowLeft") {
+                    const item = flatItems[idx];
+                    if (item?.type === "table" && open[item.table]) setOpen(o => ({ ...o, [item.table]: false }));
+                    else if (item?.type === "col") {
+                        const prev = flatItems.slice(0, idx).reverse().find(i => i.type === "table");
+                        if (prev) setFocused(prev.label);
+                    }
+                }
             };
 
-            const fetchMetrics = async () => {
+            return (
+                <div role="tree" aria-label="Database schema" ref={listRef} tabIndex={0} onKeyDown={onKey}
+                    style={{ padding: "8px 0", fontSize: "12px", outline: "none" }}>
+                    {flatItems.map((item) => {
+                        const isTable = item.type === "table";
+                        const isOpen = open[item.table];
+                        return (
+                            <div key={`${item.table}-${item.col || ""}`} role={isTable ? "treeitem" : "treeitem"}
+                                aria-expanded={isTable ? isOpen : undefined}
+                                aria-level={isTable ? 1 : 2}
+                                onClick={() => {
+                                    setFocused(item.label);
+                                    if (isTable) setOpen(o => ({ ...o, [item.table]: !o[item.table] }));
+                                    else onInsertField?.(`${item.table}.${item.col}`);
+                                }}
+                                style={{
+                                    display: "flex", alignItems: "center", gap: "6px",
+                                    padding: isTable ? "4px 12px" : "3px 12px 3px 28px",
+                                    cursor: "pointer", userSelect: "none",
+                                    background: focused === item.label ? "var(--bg-hover)" : "transparent",
+                                    color: isTable ? "var(--text-primary)" : "var(--text-tertiary)",
+                                    fontWeight: isTable ? 500 : 400,
+                                    transition: "background var(--transition)"
+                                }}>
+                                {isTable && (
+                                    <span style={{ fontSize: "8px", color: "var(--text-muted)", width: "8px", transition: "transform 0.15s", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", display: "inline-block" }} aria-hidden="true">▶</span>
+                                )}
+                                {item.label}
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        // ── History Panel ──────────────────────────────────────────────────
+        function HistoryPanel({ history, onSelect, onClose }) {
+            const grouped = useMemo(() => {
+                const now = new Date();
+                const today = now.toDateString();
+                const yesterday = new Date(now - 86400000).toDateString();
+                const groups = {};
+                history.forEach(h => {
+                    const d = new Date(h.ts).toDateString();
+                    let label = "Older";
+                    if (d === today) label = "Today";
+                    else if (d === yesterday) label = "Yesterday";
+                    else label = new Date(h.ts).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+                    if (!groups[label]) groups[label] = [];
+                    groups[label].push(h);
+                });
+                return groups;
+            }, [history]);
+
+            return (
+                <aside aria-label="Query history" style={{
+                    width: "240px", background: "var(--bg-secondary)", borderLeft: "1px solid var(--border-primary)",
+                    display: "flex", flexDirection: "column", flexShrink: 0
+                }}>
+                    <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-secondary)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <h2 style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)" }}>History</h2>
+                        <button onClick={onClose} aria-label="Close history panel" style={{ padding: "2px", color: "var(--text-muted)" }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div style={{ flex: 1, overflow: "auto", padding: "8px 0" }}>
+                        {Object.entries(grouped).map(([label, items]) => (
+                            <div key={label}>
+                                <div style={{ padding: "4px 16px", fontSize: "10px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</div>
+                                {items.map((h, i) => (
+                                    <button key={h.ts + i} onClick={() => onSelect(h)} aria-label={`Load query: ${h.prompt}`}
+                                        style={{
+                                            display: "block", width: "100%", textAlign: "left",
+                                            padding: "6px 16px", fontSize: "12px", color: "var(--text-secondary)",
+                                            transition: "background var(--transition)"
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.background = "var(--bg-hover)"}
+                                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                        <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.prompt}</div>
+                                        <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "1px" }}>{timeAgo(h.ts)}</div>
+                                    </button>
+                                ))}
+                            </div>
+                        ))}
+                        {history.length === 0 && (
+                            <p style={{ padding: "20px 16px", fontSize: "12px", color: "var(--text-muted)", textAlign: "center" }}>No queries yet</p>
+                        )}
+                    </div>
+                </aside>
+            );
+        }
+
+        // ── Virtual Results Table ──────────────────────────────────────────
+        function ResultsTable({ results }) {
+            const [sortCol, setSortCol] = useState(null);
+            const [sortDir, setSortDir] = useState("asc");
+            const [filter, setFilter] = useState("");
+            const containerRef = useRef();
+
+            if (!results || results.length === 0) return <p style={{ padding: "20px", fontSize: "12px", color: "var(--text-muted)" }}>No results</p>;
+
+            const cols = Object.keys(results[0]);
+            let rows = [...results];
+
+            if (filter) {
+                const q = filter.toLowerCase();
+                rows = rows.filter(r => Object.values(r).some(v => String(v).toLowerCase().includes(q)));
+            }
+
+            if (sortCol) {
+                rows.sort((a, b) => {
+                    const va = a[sortCol], vb = b[sortCol];
+                    const cmp = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb));
+                    return sortDir === "asc" ? cmp : -cmp;
+                });
+            }
+
+            const toggleSort = (col) => {
+                if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
+                else { setSortCol(col); setSortDir("asc"); }
+            };
+
+            const copyCell = (val) => {
+                navigator.clipboard?.writeText(String(val));
+            };
+
+            const ROW_HEIGHT = 28;
+            const VISIBLE_ROWS = Math.min(rows.length, 50);
+
+            return (
+                <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+                    <div style={{ padding: "6px 16px", borderBottom: "1px solid var(--border-secondary)", display: "flex", alignItems: "center", gap: "12px" }}>
+                        <label htmlFor="results-filter" className="sr-only">Filter results</label>
+                        <input id="results-filter" value={filter} onChange={e => setFilter(e.target.value)}
+                            placeholder="Filter…" aria-label="Filter results"
+                            style={{ padding: "4px 8px", fontSize: "11px", background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)", borderRadius: "var(--radius-sm)", color: "var(--text-primary)", outline: "none", width: "160px" }} />
+                        <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{rows.length} rows</span>
+                    </div>
+                    <div ref={containerRef} role="table" aria-label="Query results" style={{ flex: 1, overflow: "auto" }}>
+                        <div role="rowgroup">
+                            <div role="row" style={{ display: "flex", position: "sticky", top: 0, zIndex: 1, background: "var(--bg-tertiary)", borderBottom: "1px solid var(--border-primary)" }}>
+                                {cols.map(col => (
+                                    <div key={col} role="columnheader" aria-sort={sortCol === col ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                                        onClick={() => toggleSort(col)} tabIndex={0}
+                                        onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort(col); } }}
+                                        style={{ flex: 1, minWidth: 0, padding: "6px 10px", fontSize: "11px", fontWeight: 600, color: "var(--text-secondary)", cursor: "pointer", userSelect: "none", display: "flex", alignItems: "center", gap: "4px" }}>
+                                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{col}</span>
+                                        {sortCol === col && <span style={{ fontSize: "9px", color: "var(--text-muted)" }}>{sortDir === "asc" ? "↑" : "↓"}</span>}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div role="rowgroup" style={{ height: VISIBLE_ROWS * ROW_HEIGHT }}>
+                            {rows.slice(0, VISIBLE_ROWS).map((row, ri) => (
+                                <div key={ri} role="row" style={{ display: "flex", borderBottom: "1px solid var(--border-secondary)", height: ROW_HEIGHT, alignItems: "center" }}
+                                    onMouseEnter={e => e.currentTarget.style.background = "var(--bg-hover)"}
+                                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                    {cols.map(col => (
+                                        <div key={col} role="cell" tabIndex={0}
+                                            onClick={() => copyCell(row[col])}
+                                            onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); copyCell(row[col]); } }}
+                                            title={`Click to copy: ${row[col]}`}
+                                            style={{ flex: 1, minWidth: 0, padding: "0 10px", fontSize: "12px", color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer" }}>
+                                            {String(row[col] ?? "")}
+                                        </div>
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // ── Tab Bar (ARIA) ────────────────────────────────────────────────
+        function TabBar({ tabs, active, onSelect, children }) {
+            return (
+                <div>
+                    <nav role="tablist" aria-label="Workspace tabs" style={{ display: "flex", borderBottom: "1px solid var(--border-primary)", background: "var(--bg-secondary)", flexShrink: 0 }}>
+                        {tabs.map((tab, i) => (
+                            <button key={tab} role="tab" id={`tab-${tab}`} aria-selected={active === tab}
+                                aria-controls={`panel-${tab}`} tabIndex={active === tab ? 0 : -1}
+                                onClick={() => onSelect(tab)}
+                                onKeyDown={e => {
+                                    if (e.key === "ArrowRight") { e.preventDefault(); onSelect(tabs[(i + 1) % tabs.length]); }
+                                    else if (e.key === "ArrowLeft") { e.preventDefault(); onSelect(tabs[(i - 1 + tabs.length) % tabs.length]); }
+                                }}
+                                style={{
+                                    padding: "10px 20px", fontSize: "12px", fontWeight: 500,
+                                    borderBottom: active === tab ? "2px solid var(--green)" : "2px solid transparent",
+                                    color: active === tab ? "var(--text-primary)" : "var(--text-tertiary)",
+                                    background: "transparent", transition: "color var(--transition)"
+                                }}>
+                                {tab}
+                            </button>
+                        ))}
+                    </nav>
+                    {tabs.map(tab => (
+                        <div key={tab} role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}
+                            hidden={active !== tab} tabIndex={0}
+                            style={{ flex: 1, overflow: active === tab ? "auto" : "hidden", display: active === tab ? "flex" : "none", flexDirection: "column" }}>
+                            {active === tab && children[tabs.indexOf(tab)]}
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        // ── SqlView ────────────────────────────────────────────────────────
+        function SqlView({ sql, onCopy }) {
+            const ref = useRef();
+            return (
+                <div style={{ padding: "16px", flex: 1 }}>
+                    <div style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-secondary)", borderRadius: "var(--radius-md)", position: "relative" }}>
+                        <pre ref={ref} style={{ padding: "14px 16px", fontSize: "12px", lineHeight: "1.7", color: "var(--text-secondary)", whiteSpace: "pre-wrap", wordBreak: "break-word", margin: 0 }}>
+                            {sql || "—"}
+                        </pre>
+                        {sql && (
+                            <Tooltip text="Copy SQL (C)">
+                                <button onClick={onCopy} aria-label="Copy SQL to clipboard"
+                                    style={{ position: "absolute", top: "8px", right: "8px", padding: "5px", background: "var(--bg-secondary)", border: "1px solid var(--border-primary)", borderRadius: "var(--radius-sm)", color: "var(--text-muted)" }}>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                    </svg>
+                                </button>
+                            </Tooltip>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // ── MetricsView ────────────────────────────────────────────────────
+        function MetricsView({ response }) {
+            if (!response) return <p style={{ padding: "20px", fontSize: "12px", color: "var(--text-muted)" }}>Run a query to see metrics</p>;
+
+            const trace = response.trace || {};
+            const spans = trace.spans || [];
+            const spanMap = {};
+            spans.forEach(s => { spanMap[s.name] = s.ms; });
+
+            const items = [
+                { label: "Compile", value: spanMap.compile != null ? `${spanMap.compile} ms` : "—" },
+                { label: "Validate", value: spanMap.validate != null ? `${spanMap.validate} ms` : "—" },
+                { label: "Execute", value: spanMap.execute != null ? `${spanMap.execute} ms` : (response.cache_hit ? "cached" : "—") },
+                { label: "Total", value: trace.total_ms != null ? `${trace.total_ms} ms` : "—" },
+                { label: "Parameters", value: response.parameters ? `${response.parameters.length} injected` : "—" },
+                { label: "Cache", value: response.cache_hit ? "Hit (<2ms)" : "Miss" },
+                { label: "Rows returned", value: response.results ? String(response.results.length) : "—" },
+                { label: "Request ID", value: response.request_id ? response.request_id.slice(0, 8) : "—" },
+            ];
+            return (
+                <div style={{ padding: "16px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "12px" }}>
+                    {items.map(({ label, value }) => (
+                        <div key={label} style={{ padding: "12px", border: "1px solid var(--border-secondary)", borderRadius: "var(--radius-md)" }}>
+                            <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "4px" }}>{label}</div>
+                            <div style={{ fontSize: "13px", fontWeight: 500, color: "var(--text-primary)" }}>{value}</div>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        // ── AuditView ──────────────────────────────────────────────────────
+        function AuditView({ response, prompt }) {
+            if (!response) return <p style={{ padding: "20px", fontSize: "12px", color: "var(--text-muted)" }}>Run a query to see audit entry</p>;
+
+            const trace = response.trace || {};
+            const spans = trace.spans || [];
+            const spanMap = {};
+            spans.forEach(s => { spanMap[s.name] = s.ms; });
+
+            const fields = [
+                { label: "Request ID", value: response.request_id || "—" },
+                { label: "Prompt", value: prompt },
+                { label: "SQL", value: response.compiled_sql || "—" },
+                { label: "Parameters", value: response.parameters ? JSON.stringify(response.parameters) : "—" },
+                { label: "Compile", value: spanMap.compile != null ? `${spanMap.compile} ms` : "—" },
+                { label: "Validate", value: spanMap.validate != null ? `${spanMap.validate} ms` : "—" },
+                { label: "Execute", value: spanMap.execute != null ? `${spanMap.execute} ms` : (response.cache_hit ? "cached" : "—") },
+                { label: "Total", value: trace.total_ms != null ? `${trace.total_ms} ms` : "—" },
+                { label: "Cache", value: response.cache_hit ? "Hit" : "Miss" },
+                { label: "Rows", value: response.results ? String(response.results.length) : "—" },
+            ];
+
+            return (
+                <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                    {fields.map(({ label, value }) => (
+                        <div key={label} style={{ display: "flex", alignItems: "baseline", gap: "12px" }}>
+                            <div style={{ width: "80px", fontSize: "10px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", flexShrink: 0 }}>{label}</div>
+                            <div className="mono" style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: "1.6", wordBreak: "break-all", minWidth: 0 }}>{value}</div>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        // ── Main App ───────────────────────────────────────────────────────
+        function App() {
+            const [prompt, setPrompt] = useState("");
+            const [loading, setLoading] = useState(false);
+            const [appState, setAppState] = useState("idle");
+            const [response, setResponse] = useState(null);
+            const [activeTab, setActiveTab] = useState("SQL");
+            const [history, setHistory] = useState(loadHistory);
+            const [showHistory, setShowHistory] = useState(false);
+            const [showPalette, setShowPalette] = useState(false);
+            const [showShortcuts, setShowShortcuts] = useState(false);
+            const [sqlCopied, setSqlCopied] = useState(false);
+            const [exporting, setExporting] = useState(false);
+            const [exportProgress, setExportProgress] = useState(0);
+            const [downloadUrl, setDownloadUrl] = useState(null);
+            const [statusMessage, setStatusMessage] = useState("");
+            const [metrics, setMetrics] = useState(null);
+            const abortRef = useRef(null);
+            const promptRef = useRef();
+            const csrfRef = useRef("");
+
+            const apiKey = "pred_live_7f8a9b2c3d4e5f6g7h8i9j0k";
+
+            useEffect(() => {
+                const el = document.cookie.match(/_predicate_csrf=([^;]+)/);
+                csrfRef.current = el ? decodeURIComponent(el[1]) : "";
+            }, []);
+
+            const fetchMetrics = useCallback(async () => {
                 try {
                     const res = await fetch("/api/v1/metrics", { headers: { "X-Predicate-API-Key": apiKey } });
                     const data = await res.json();
                     if (!data.error) setMetrics(data);
-                } catch (err) {}
-            };
+                } catch {}
+            }, []);
 
-            React.useEffect(() => { fetchMetrics(); }, []);
+            useEffect(() => { fetchMetrics(); }, [fetchMetrics]);
 
-            const totalQueries = metrics?.historical_aggregates?.total_queries_processed || 0;
+            const allTabs = ["SQL", "Results", "Metrics", "Cache", "Audit"];
+            const tabs = response ? allTabs : ["SQL"];
 
-            const tabs = ["SQL", "Results", "Metrics", "Cache", "Audit"];
+            const compile = useCallback(async () => {
+                if (!prompt.trim() || loading) return;
+                setLoading(true);
+                setAppState("compiling");
+                setStatusMessage("Compiling…");
+                setResponse(null);
+                setDownloadUrl(null);
 
-            const tables = {
-                customers: ["id", "name", "email", "country", "status"],
-                orders: ["id", "customer_id", "total_amount", "order_status"],
-                products: ["id", "product_name", "price", "category"]
-            };
+                const ctrl = new AbortController();
+                abortRef.current = ctrl;
 
-            const examplePrompts = [
-                "Show active customers in Germany",
-                "List orders over $500",
-                "Average order value by country"
-            ];
+                try {
+                    setAppState("executing");
+                    setStatusMessage("Executing…");
+                    const res = await fetch("/api/v1/query/compile", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "X-Predicate-API-Key": apiKey, "X-CSRF-Token": csrfRef.current },
+                        body: JSON.stringify({ prompt: prompt.trim() }),
+                        signal: ctrl.signal,
+                    });
+                    const data = await res.json();
+
+                    if (res.ok) {
+                        setResponse(data);
+                        setAppState("completed");
+                        setStatusMessage("Completed");
+                        setActiveTab("SQL");
+                        saveHistory({ prompt: prompt.trim(), sql: data.compiled_sql, results: data.results, trace: data.trace, request_id: data.request_id, cache_hit: data.cache_hit });
+                        setHistory(loadHistory());
+                        fetchMetrics();
+                    } else {
+                        setResponse({ error: data.detail || "Compilation failed." });
+                        setAppState("failed");
+                        setStatusMessage("Failed");
+                    }
+                } catch (err) {
+                    if (err.name === "AbortError") {
+                        setAppState("cancelled");
+                        setStatusMessage("Cancelled");
+                    } else {
+                        setResponse({ error: "Engine unreachable." });
+                        setAppState("failed");
+                        setStatusMessage("Failed");
+                    }
+                } finally {
+                    setLoading(false);
+                    abortRef.current = null;
+                }
+            }, [prompt, loading, fetchMetrics]);
+
+            const cancel = useCallback(() => {
+                if (abortRef.current) { abortRef.current.abort(); }
+                setLoading(false);
+            }, []);
+
+            const copySql = useCallback(() => {
+                if (response?.compiled_sql) {
+                    navigator.clipboard?.writeText(response.compiled_sql);
+                    setSqlCopied(true);
+                    setTimeout(() => setSqlCopied(false), 1500);
+                }
+            }, [response]);
+
+            const exportCsv = useCallback(async () => {
+                if (!prompt.trim() || exporting) return;
+                setExporting(true);
+                setExportProgress(0);
+                setDownloadUrl(null);
+                setStatusMessage("Exporting…");
+                try {
+                    const res = await fetch("/api/v1/export/async", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "X-Predicate-API-Key": apiKey, "X-CSRF-Token": csrfRef.current },
+                        body: JSON.stringify({ prompt: prompt.trim() }),
+                    });
+                    const data = await res.json();
+                    if (data.task_id) {
+                        const poll = setInterval(async () => {
+                            try {
+                                const r = await fetch(`/api/v1/export/status/${data.task_id}`, { headers: { "X-Predicate-API-Key": apiKey } });
+                                const d = await r.json();
+                                if (d.state === "PROCESSING" && d.meta) setExportProgress(d.meta.progress || 10);
+                                else if (d.state === "SUCCESS") {
+                                    clearInterval(poll);
+                                    const blob = new Blob([d.result.csv_payload], { type: "text/csv;charset=utf-8;" });
+                                    setDownloadUrl(URL.createObjectURL(blob));
+                                    setExporting(false);
+                                    setExportProgress(100);
+                                    setStatusMessage("Export ready");
+                                    fetchMetrics();
+                                } else if (d.state === "FAILURE") { clearInterval(poll); setExporting(false); setStatusMessage("Export failed"); }
+                            } catch { clearInterval(poll); setExporting(false); }
+                        }, 1000);
+                    }
+                } catch { setExporting(false); }
+            }, [prompt, exporting, fetchMetrics]);
+
+            const loadFromHistory = useCallback((h) => {
+                setPrompt(h.prompt);
+                setShowHistory(false);
+                if (h.sql) {
+                    setResponse({
+                        compiled_sql: h.sql, results: h.results || [], parameters: [],
+                        cache_hit: h.cache_hit || false, request_id: h.request_id || "",
+                        trace: h.trace || {},
+                    });
+                    setActiveTab("SQL");
+                    setAppState("completed");
+                    setStatusMessage("Loaded from history");
+                }
+            }, []);
+
+            const { cycle: cycleTheme } = useContext(ThemeCtx);
+
+            // ── Global keyboard shortcuts ───────────────────────────────
+            useEffect(() => {
+                const handler = (e) => {
+                    const tag = document.activeElement?.tagName;
+                    const isInput = tag === "TEXTAREA" || tag === "INPUT";
+
+                    if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+                        e.preventDefault();
+                        setShowPalette(v => !v);
+                        return;
+                    }
+
+                    if (e.key === "Escape") {
+                        if (showPalette) { setShowPalette(false); return; }
+                        if (showShortcuts) { setShowShortcuts(false); return; }
+                        if (loading) { cancel(); return; }
+                    }
+
+                    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                        e.preventDefault();
+                        compile();
+                        return;
+                    }
+
+                    if (isInput) return;
+
+                    if (e.key === "/" && !e.metaKey && !e.ctrlKey) {
+                        e.preventDefault();
+                        promptRef.current?.focus();
+                    } else if (e.key === "c" && !e.metaKey && !e.ctrlKey) {
+                        copySql();
+                    } else if (e.key === "e" && !e.metaKey && !e.ctrlKey) {
+                        exportCsv();
+                    } else if (e.key === "h") {
+                        setShowHistory(v => !v);
+                    } else if (e.key === "t") {
+                        cycleTheme();
+                    } else if (e.key === "?") {
+                        setShowShortcuts(v => !v);
+                    } else if (["1","2","3","4","5"].includes(e.key)) {
+                        const idx = parseInt(e.key) - 1;
+                        if (tabs[idx]) setActiveTab(tabs[idx]);
+                    }
+                };
+                window.addEventListener("keydown", handler);
+                return () => window.removeEventListener("keydown", handler);
+            }, [showPalette, showShortcuts, loading, compile, cancel, copySql, exportCsv, tabs, cycleTheme]);
+
+            // ── Command palette actions ──────────────────────────────────
+            const paletteActions = useMemo(() => [
+                { id: "compile", label: "Compile Query", hint: "⌘Enter", onRun: compile },
+                { id: "export", label: "Export CSV", hint: "E", onRun: exportCsv },
+                { id: "copy", label: "Copy SQL", hint: "C", onRun: copySql },
+                { id: "history", label: "Toggle History", hint: "H", onRun: () => setShowHistory(v => !v) },
+                { id: "shortcuts", label: "Keyboard Shortcuts", hint: "?", onRun: () => setShowShortcuts(true) },
+                { id: "theme", label: "Cycle Theme", hint: "T", onRun: cycleTheme },
+                { id: "focus", label: "Focus Prompt", hint: "/", onRun: () => promptRef.current?.focus() },
+            ], [compile, exportCsv, copySql, cycleTheme]);
+
+            // ── Status dot color ─────────────────────────────────────────
+            const stateColor = { idle: "var(--text-muted)", compiling: "var(--amber)", executing: "var(--amber)", completed: "var(--green)", cancelled: "var(--text-muted)", failed: "var(--red)" }[appState] || "var(--text-muted)";
+            const stateLabel = { idle: "Idle", compiling: "Compiling", executing: "Executing", completed: "Completed", cancelled: "Cancelled", failed: "Failed" }[appState] || "Idle";
 
             return (
                 <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-                    <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", height: "48px", borderBottom: "1px solid #E5E7EB", background: "#FFFFFF", flexShrink: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#24d455" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    {/* ── Top Bar ──────────────────────────────────────── */}
+                    <header role="banner" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", height: "44px", borderBottom: "1px solid var(--border-primary)", background: "var(--bg-secondary)", flexShrink: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                 <path d="M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h2l1-1 1 1h4"/>
                                 <path d="M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-3l-1-1-1 1h-3"/>
                                 <path d="M5.89 9.71c-2.15 2.15-2.3 5.47-.35 7.43l4.24-4.25.7-.7.71-.71 2.12-2.12c-1.95-1.96-5.27-1.8-7.42.35"/>
                                 <path d="M11 15.5c.5 2.5-.17 4.5-1 6.5h4c2-5.5-.5-12-1-14"/>
                             </svg>
-                            <span style={{ fontSize: "13px", fontWeight: 600, color: "#111827" }}>Predicate</span>
+                            <span style={{ fontSize: "13px", fontWeight: 600 }}>Predicate</span>
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                            <div
-                                style={{ display: "flex", alignItems: "center", gap: "5px", padding: "3px 8px", fontSize: "10px", fontFamily: "'JetBrains Mono', monospace", color: "#24d455", background: "#F0FDF4", border: "1px solid #DCFCE7", borderRadius: "20px", cursor: "default" }}
-                                title={apiKey}
-                            >
-                                <span style={{ width: "4px", height: "4px", background: "#24d455", borderRadius: "50%" }} />
-                                Authenticated
-                            </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                            <button onClick={() => setShowPalette(true)} aria-label="Open command palette (⌘K)"
+                                style={{ display: "flex", alignItems: "center", gap: "6px", padding: "4px 8px", fontSize: "11px", color: "var(--text-muted)", background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)", borderRadius: "var(--radius-sm)", fontFamily: "var(--font-mono)" }}>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                                <span>⌘K</span>
+                            </button>
+                            <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: stateColor }} role="status" aria-label={`Connection status: ${stateLabel}`} />
                         </div>
                     </header>
 
+                    {/* ── Main ─────────────────────────────────────────── */}
                     <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-                        <div style={{ width: "260px", minWidth: "220px", display: "flex", flexDirection: "column", borderRight: "1px solid #F1F5F9", background: "#FFFFFF" }}>
-                            <div style={{ padding: "16px 20px", borderBottom: "1px solid #F3F4F6", flex: 1, display: "flex", flexDirection: "column" }}>
-                                <div style={{ fontSize: "11px", fontWeight: 500, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "4px" }}>Prompt</div>
-                                <div style={{ fontSize: "11px", color: "#D1D5DB", marginBottom: "18px" }}>Describe the data to retrieve.</div>
-                                <form onSubmit={executeQuery} style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1 }}>
-                                    <textarea
-                                        value={prompt}
-                                        onChange={(e) => setPrompt(e.target.value)}
-                                        placeholder={"Describe the data you need.\n\nExample\nShow active customers in Germany"}
-                                        rows={6}
-                                        style={{ width: "100%", padding: "10px 12px", fontSize: "13px", lineHeight: "1.5", border: "1px solid #E5E7EB", borderRadius: "6px", background: "#FAFAFA", color: "#111827", outline: "none", resize: "none" }}
-                                    />
-                                    <div style={{ display: "flex", gap: "8px" }}>
-                                        <button
-                                            type="submit"
-                                            disabled={loading || exporting}
-                                            style={{ flex: 1, padding: "8px 16px", fontSize: "12px", fontWeight: 500, background: "#111827", color: "#FFFFFF", border: "none", borderRadius: "6px", cursor: loading ? "wait" : "pointer", opacity: loading ? 0.6 : 1, transition: "opacity 0.15s" }}
-                                        >
-                                            {loading ? "Compiling..." : "Run Query"}
+                        {/* ── Left Sidebar ───────────────────────────── */}
+                        <aside aria-label="Prompt and schema" style={{ width: "280px", minWidth: "240px", display: "flex", flexDirection: "column", borderRight: "1px solid var(--border-primary)", background: "var(--bg-secondary)", flexShrink: 0 }}>
+                            {/* Prompt */}
+                            <section aria-label="Query prompt" style={{ padding: "14px 16px", borderBottom: "1px solid var(--border-secondary)" }}>
+                                <label htmlFor="prompt-input" style={{ display: "block", fontSize: "10px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "8px" }}>Prompt</label>
+                                <form onSubmit={e => { e.preventDefault(); compile(); }}>
+                                    <textarea ref={promptRef} id="prompt-input" value={prompt} onChange={e => setPrompt(e.target.value)}
+                                        placeholder={"Describe the data you need."} rows={5}
+                                        aria-describedby="prompt-hint"
+                                        style={{ width: "100%", padding: "10px 12px", fontSize: "13px", lineHeight: "1.5", border: "1px solid var(--border-primary)", borderRadius: "var(--radius-md)", background: "var(--bg-primary)", color: "var(--text-primary)", outline: "none", resize: "none" }} />
+                                    <p id="prompt-hint" className="sr-only">Natural language query. Press ⌘Enter to compile.</p>
+                                    <div style={{ display: "flex", gap: "6px", marginTop: "8px" }}>
+                                        <button type="submit" disabled={loading || !prompt.trim()} aria-disabled={loading || !prompt.trim()}
+                                            style={{ flex: 1, padding: "7px 0", fontSize: "12px", fontWeight: 500, background: "var(--text-primary)", color: "var(--bg-primary)", borderRadius: "var(--radius-sm)", transition: "opacity var(--transition)" }}>
+                                            {loading ? "Compiling…" : "Run Query"}
                                         </button>
-                                        <button
-                                            type="button"
-                                            onClick={executeExport}
-                                            disabled={loading || exporting || !prompt.trim()}
-                                            style={{ padding: "8px 16px", fontSize: "12px", fontWeight: 500, background: "#FFFFFF", color: "#6B7280", border: "1px solid #E5E7EB", borderRadius: "6px", cursor: exporting ? "wait" : "pointer", opacity: (!prompt.trim() || exporting) ? 0.5 : 1 }}
-                                        >
-                                            {exporting ? `${exportProgress}%` : "Export"}
-                                        </button>
+                                        <Tooltip text={exporting ? "Exporting…" : "Export CSV (E)"}>
+                                            <button type="button" onClick={exportCsv} disabled={exporting || !prompt.trim()} aria-label="Export results as CSV"
+                                                style={{ padding: "7px 10px", fontSize: "12px", fontWeight: 500, border: "1px solid var(--border-primary)", borderRadius: "var(--radius-sm)", color: "var(--text-tertiary)" }}>
+                                                {exporting ? `${exportProgress}%` : "Export"}
+                                            </button>
+                                        </Tooltip>
                                     </div>
                                 </form>
-                            </div>
+                            </section>
 
+                            {/* Export progress */}
                             {exporting && (
-                                <div style={{ padding: "10px 20px", borderBottom: "1px solid #F3F4F6" }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#9CA3AF", marginBottom: "6px", fontFamily: "'JetBrains Mono', monospace" }}>
-                                        <span>Export</span>
-                                        <span>{exportStatus}</span>
-                                    </div>
-                                    <div style={{ height: "3px", background: "#F3F4F6", borderRadius: "2px", overflow: "hidden" }}>
-                                        <div style={{ height: "100%", background: "#24d455", borderRadius: "2px", width: `${exportProgress}%`, transition: "width 0.3s" }} />
+                                <div style={{ padding: "8px 16px", borderBottom: "1px solid var(--border-secondary)" }} role="progressbar" aria-valuenow={exportProgress} aria-valuemin={0} aria-valuemax={100} aria-label="Export progress">
+                                    <div style={{ height: "2px", background: "var(--bg-tertiary)", borderRadius: "1px", overflow: "hidden" }}>
+                                        <div style={{ height: "100%", background: "var(--green)", width: `${exportProgress}%`, transition: "width 0.3s" }} />
                                     </div>
                                 </div>
                             )}
 
+                            {/* Download link */}
                             {downloadUrl && (
-                                <div style={{ padding: "10px 20px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                    <span style={{ fontSize: "12px", color: "#24d455" }}>CSV ready</span>
-                                    <a href={downloadUrl} download="predicate_export.csv" style={{ fontSize: "12px", fontWeight: 500, color: "#111827", textDecoration: "underline" }}>Download</a>
+                                <div style={{ padding: "8px 16px", borderBottom: "1px solid var(--border-secondary)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                    <span style={{ fontSize: "12px", color: "var(--green)" }}>CSV ready</span>
+                                    <a href={downloadUrl} download="predicate_export.csv" style={{ fontSize: "12px", fontWeight: 500, color: "var(--text-primary)", textDecoration: "underline" }}>Download</a>
                                 </div>
                             )}
 
-                            <div style={{ padding: "14px 20px", borderTop: "1px solid #F3F4F6" }}>
-                                <button
-                                    onClick={() => setSchemaOpen(!schemaOpen)}
-                                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100px", padding: "6px 12px", fontSize: "11px", fontWeight: 500, color: "#6B7280", background: "#FAFAFA", border: "1px solid #E5E7EB", borderRadius: "6px", cursor: "pointer" }}
-                                >
-                                    <span>Schema</span>
-                                    <span style={{ fontSize: "10px", color: "#9CA3AF" }}>{schemaOpen ? "^" : "v"}</span>
-                                </button>
-                                {schemaOpen && (
-                                    <div style={{ marginTop: "10px" }}>
-                                        {Object.entries(tables).map(([name, cols]) => (
-                                            <div key={name} style={{ marginBottom: "2px" }}>
-                                                <button
-                                                    onClick={() => setExpandedTable(expandedTable === name ? null : name)}
-                                                    style={{ display: "flex", alignItems: "center", gap: "6px", padding: "3px 0", fontSize: "12px", fontWeight: 500, color: "#111827", background: "none", border: "none", cursor: "pointer", width: "100%", textAlign: "left" }}
-                                                >
-                                                    <span style={{ fontSize: "8px", color: "#9CA3AF", width: "10px", transition: "transform 0.15s", transform: expandedTable === name ? "rotate(90deg)" : "rotate(0deg)" }}>&#9654;</span>
-                                                    {name}
-                                                </button>
-                                                {expandedTable === name && (
-                                                    <div style={{ paddingLeft: "16px", paddingBottom: "6px", fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "#9CA3AF", lineHeight: "1.8" }}>
-                                                        {cols.join(", ")}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                            {/* Schema */}
+                            <section aria-label="Schema explorer" style={{ flex: 1, overflow: "auto", borderBottom: "1px solid var(--border-secondary)" }}>
+                                <div style={{ padding: "10px 16px 4px", fontSize: "10px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Schema</div>
+                                <SchemaExplorer onInsertField={(f) => setPrompt(p => p ? `${p} ${f}` : f)} />
+                            </section>
+                        </aside>
 
-                        <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#FAFAFA", overflow: "hidden" }}>
-                            <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid #E5E7EB", background: "#FFFFFF", flexShrink: 0 }}>
-                                {tabs.map((tab) => (
-                                    <button
-                                        key={tab}
-                                        onClick={() => setActiveTab(tab)}
-                                        style={{
-                                            padding: "12px 24px", fontSize: "12px", fontWeight: 500, border: "none", borderBottom: activeTab === tab ? "3px solid #24d455" : "3px solid transparent", background: "transparent", cursor: "pointer",
-                                            color: activeTab === tab ? "#111827" : "#6B7280"
-                                        }}
-                                    >
-                                        {tab}
-                                    </button>
-                                ))}
-                                <div style={{ marginLeft: "auto", padding: "0 20px", display: "flex", alignItems: "center", gap: "12px" }}>
-                                    {response && (
-                                        <span style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: response.cache_hit ? "#24d455" : "#F59E0B" }}>
-                                            {response.cache_hit ? "cache hit" : "db miss"}
-                                        </span>
+                        {/* ── Center Workspace ──────────────────────── */}
+                        <main role="main" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                            <TabBar tabs={tabs} active={activeTab} onSelect={setActiveTab}>
+                                {/* SQL */}
+                                <SqlView sql={response?.compiled_sql} onCopy={copySql} />
+
+                                {/* Results */}
+                                <div style={{ flex: 1, overflow: "auto" }}>
+                                    {response?.error ? (
+                                        <div style={{ margin: "16px", padding: "12px", background: "var(--red-bg)", border: "1px solid var(--red-border)", borderRadius: "var(--radius-md)", fontSize: "12px", color: "var(--red)" }} role="alert">{response.error}</div>
+                                    ) : (
+                                        <ResultsTable results={response?.results} />
                                     )}
                                 </div>
-                            </div>
 
-                            <div style={{ flex: 1, overflow: "auto", background: "#FFFFFF" }}>
-                                {!response && !loading && !hasRun && (
-                                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", height: "100%", paddingBottom: "180px" }}>
-                                        <div style={{ textAlign: "center" }}>
-                                            <div style={{ fontSize: "36px", marginBottom: "16px", opacity: 0.15 }}>
-                                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-                                                    <path d="M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h2l1-1 1 1h4"/>
-                                                    <path d="M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-3l-1-1-1 1h-3"/>
-                                                    <path d="M5.89 9.71c-2.15 2.15-2.3 5.47-.35 7.43l4.24-4.25.7-.7.71-.71 2.12-2.12c-1.95-1.96-5.27-1.8-7.42.35"/>
-                                                    <path d="M11 15.5c.5 2.5-.17 4.5-1 6.5h4c2-5.5-.5-12-1-14"/>
-                                                </svg>
-                                            </div>
-                                            <div style={{ fontSize: "14px", fontWeight: 500, color: "#6B7280", marginBottom: "20px" }}>Ready</div>
-                                            <div style={{ fontSize: "11px", color: "#9CA3AF", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Try asking</div>
-                                            <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" }}>
-                                                {examplePrompts.map((ex) => (
-                                                    <button
-                                                        key={ex}
-                                                        onClick={() => setPrompt(ex)}
-                                                        style={{ fontSize: "12px", color: "#374151", background: "#F9FAFB", border: "1px solid #F3F4F6", cursor: "pointer", padding: "8px 16px", borderRadius: "20px", transition: "all 0.15s", display: "flex", alignItems: "center", gap: "8px" }}
-                                                        onMouseEnter={(e) => { e.currentTarget.style.background = "#F3F4F6"; e.currentTarget.style.borderColor = "#E5E7EB"; }}
-                                                        onMouseLeave={(e) => { e.currentTarget.style.background = "#F9FAFB"; e.currentTarget.style.borderColor = "#F3F4F6"; }}
-                                                    >
-                                                        {ex}
-                                                        <span style={{ fontSize: "10px", color: "#9CA3AF" }}>&rarr;</span>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
+                                {/* Metrics */}
+                                <MetricsView response={response} />
 
-                                {loading && (
-                                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-                                        <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#6B7280" }}>
-                                            <div style={{ width: "14px", height: "14px", border: "2px solid #E5E7EB", borderTopColor: "#24d455", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                                            Compiling...
-                                        </div>
-                                    </div>
-                                )}
-
-                                {response && activeTab === "SQL" && (
-                                    <div className="tab-content" style={{ padding: "20px" }}>
-                                        <div style={{ background: "#F9FAFB", border: "1px solid #F3F4F6", borderRadius: "8px", padding: "16px" }}>
-                                            <pre style={{ fontSize: "12px", lineHeight: "1.7", color: "#374151", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                                                {response.compiled_sql || JSON.stringify(response, null, 2)}
+                                {/* Cache */}
+                                <div style={{ padding: "16px" }}>
+                                    {response ? (
+                                        <div>
+                                            <p style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "10px" }}>
+                                                {response.cache_hit ? "Served from Redis cache" : "Computed fresh, cached for 300s"}
+                                            </p>
+                                            <pre className="mono" style={{ fontSize: "12px", color: "var(--text-secondary)", whiteSpace: "pre-wrap" }}>
+                                                {response.parameters ? JSON.stringify(response.parameters, null, 2) : "No parameters"}
                                             </pre>
                                         </div>
-                                    </div>
-                                )}
+                                    ) : (
+                                        <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>Run a query to see cache details</p>
+                                    )}
+                                </div>
 
-                                {response && activeTab === "Results" && (
-                                    <div className="tab-content" style={{ padding: "20px" }}>
-                                        {response.error ? (
-                                            <div style={{ padding: "12px 16px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "6px", fontSize: "12px", color: "#DC2626" }}>{response.error}</div>
-                                        ) : response.results ? (
-                                            <div>
-                                                <div style={{ fontSize: "11px", color: "#9CA3AF", marginBottom: "12px", fontFamily: "'JetBrains Mono', monospace" }}>{response.results.length} rows</div>
-                                                <pre style={{ fontSize: "12px", lineHeight: "1.6", color: "#374151", whiteSpace: "pre-wrap" }}>{JSON.stringify(response.results, null, 2)}</pre>
-                                            </div>
-                                        ) : (
-                                            <div style={{ fontSize: "12px", color: "#9CA3AF" }}>No results returned.</div>
-                                        )}
-                                    </div>
-                                )}
+                                {/* Audit */}
+                                <AuditView response={response} prompt={prompt} />
+                            </TabBar>
+                        </main>
 
-                                {response && activeTab === "Metrics" && (
-                                    <div className="tab-content" style={{ padding: "20px" }}>
-                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                                            {[
-                                                { label: "SQL", value: response.compiled_sql ? "Compiled" : "-" },
-                                                { label: "Parameters", value: response.parameters ? `${response.parameters.length} injected` : "-" },
-                                                { label: "Cache", value: response.cache_hit ? "Hit (<2ms)" : "Miss" },
-                                                { label: "Rows", value: response.results ? response.results.length : "-" },
-                                            ].map(({ label, value }) => (
-                                                <div key={label} style={{ padding: "12px", border: "1px solid #F3F4F6", borderRadius: "6px" }}>
-                                                    <div style={{ fontSize: "11px", color: "#9CA3AF", marginBottom: "4px" }}>{label}</div>
-                                                    <div style={{ fontSize: "13px", fontWeight: 500, color: "#111827" }}>{value}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {response && activeTab === "Cache" && (
-                                    <div className="tab-content" style={{ padding: "20px" }}>
-                                        <div style={{ fontSize: "11px", color: "#9CA3AF", fontFamily: "'JetBrains Mono', monospace", marginBottom: "12px" }}>
-                                            {response.cache_hit ? "Served from Redis cache" : "Computed fresh, cached for next request"}
-                                        </div>
-                                        <pre style={{ fontSize: "12px", lineHeight: "1.6", color: "#374151", whiteSpace: "pre-wrap" }}>
-                                            {response.parameters ? `Signature: ${JSON.stringify(response.parameters)}` : "No parameters"}
-                                        </pre>
-                                    </div>
-                                )}
-
-                                {response && activeTab === "Audit" && (
-                                    <div className="tab-content" style={{ padding: "20px" }}>
-                                        <div style={{ fontSize: "11px", color: "#9CA3AF", fontFamily: "'JetBrains Mono', monospace", marginBottom: "16px" }}>
-                                            Compliance log entry
-                                        </div>
-                                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                            {[
-                                                { label: "Prompt", value: prompt },
-                                                { label: "SQL", value: response.compiled_sql || "-" },
-                                                { label: "Parameters", value: response.parameters ? JSON.stringify(response.parameters) : "-" },
-                                                { label: "Cache", value: response.cache_hit ? "Hit" : "Miss" },
-                                                { label: "Rows", value: response.results ? String(response.results.length) : "-" },
-                                            ].map(({ label, value }) => (
-                                                <div key={label}>
-                                                    <div style={{ fontSize: "11px", color: "#9CA3AF", marginBottom: "4px", textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</div>
-                                                    <div style={{ fontSize: "12px", color: "#374151", fontFamily: "'JetBrains Mono', monospace", lineHeight: "1.6", wordBreak: "break-all" }}>{value}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                        {/* ── History Panel ────────────────────────── */}
+                        {showHistory && <HistoryPanel history={history} onSelect={loadFromHistory} onClose={() => setShowHistory(false)} />}
                     </div>
 
-                    <footer style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", height: "28px", borderTop: "1px solid #E5E7EB", background: "#FFFFFF", flexShrink: 0, fontSize: "11px", color: "#9CA3AF", fontFamily: "'JetBrains Mono', monospace" }}>
+                    {/* ── Status Bar ──────────────────────────────────── */}
+                    <footer role="contentinfo" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", height: "26px", borderTop: "1px solid var(--border-primary)", background: "var(--bg-secondary)", flexShrink: 0, fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                        <span>predicate</span>
                         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                            <span>predicate</span>
-                            <span style={{ color: loading ? "#F59E0B" : "#86EFAC" }}>{loading ? "compiling" : "ready"}</span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                            <span style={{ display: "flex", alignItems: "center", gap: "5px" }}><span style={{ width: "5px", height: "5px", background: "#86EFAC", borderRadius: "50%" }} />Redis</span>
-                            <span style={{ display: "flex", alignItems: "center", gap: "5px" }}><span style={{ width: "5px", height: "5px", background: "#86EFAC", borderRadius: "50%" }} />PostgreSQL</span>
-                            {metrics && <span>{totalQueries} queries</span>}
+                            <span aria-live="polite" style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                                <span style={{ width: "5px", height: "5px", background: stateColor, borderRadius: "50%" }} />
+                                {stateLabel}
+                            </span>
+                            <span style={{ display: "flex", alignItems: "center", gap: "5px" }}><span style={{ width: "5px", height: "5px", background: "var(--green)", borderRadius: "50%" }} />Redis Connected</span>
+                            <span style={{ display: "flex", alignItems: "center", gap: "5px" }}><span style={{ width: "5px", height: "5px", background: "var(--green)", borderRadius: "50%" }} />PostgreSQL Connected</span>
+                            {metrics && <span>{metrics.historical_aggregates?.total_queries_processed || 0} queries</span>}
                         </div>
                     </footer>
+
+                    {/* ── Overlays ──────────────────────────────────────── */}
+                    <CommandPalette open={showPalette} onClose={() => setShowPalette(false)} actions={paletteActions} />
+                    <ShortcutsDialog open={showShortcuts} onClose={() => setShowShortcuts(false)} />
                 </div>
             );
         }
 
+        function Root() {
+            return (
+                <ThemeProvider>
+                    <App />
+                </ThemeProvider>
+            );
+        }
+
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<PredicateWorkspace />);
+        root.render(<Root />);
     </script>
 </body>
 </html>
