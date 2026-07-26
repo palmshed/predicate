@@ -223,7 +223,7 @@ psql -U postgres predicate_db < backup_20260726.sql
 
 - [ ] All tests passing: `pytest -v` (37/37)
 - [ ] CI pipeline green
-- [ ] Benchmark suite passing: `python benchmark.py`
+- [ ] Benchmark suite passing: `python3 benchmark.py`
 - [ ] Security audit completed (see docs/threat-model.md)
 - [ ] Documentation updated (README, CHANGELOG, docs/)
 - [ ] Load testing completed (phase 3 of benchmark suite)
