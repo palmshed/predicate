@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="https://raw.githubusercontent.com/palmshed/predicate/main/.github/assets/thumbnail.png" alt="predicate" width="100%">
+</p>
+
+<p align="center">
   <img src=".github/website/hero.svg" alt="Predicate AI Engine" width="900">
 </p>
 
