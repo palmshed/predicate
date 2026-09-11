@@ -27,8 +27,9 @@ class DevServer(http.server.SimpleHTTPRequestHandler):
             if "\r" in new_path or "\n" in new_path:
                 self.send_error(400, "Invalid path")
                 return
+            safe_path = new_path.replace("\r", "").replace("\n", "")
             self.send_response(302)
-            self.send_header("Location", new_path)
+            self.send_header("Location", safe_path)
             self.end_headers()
             return
         if os.path.isdir(path):
