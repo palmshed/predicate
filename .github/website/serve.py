@@ -24,6 +24,9 @@ class DevServer(http.server.SimpleHTTPRequestHandler):
             new_path = clean_path + "/"
             if len(parts) > 1:
                 new_path += "?" + parts[1]
+            if "\r" in new_path or "\n" in new_path:
+                self.send_error(400, "Invalid path")
+                return
             self.send_response(302)
             self.send_header("Location", new_path)
             self.end_headers()

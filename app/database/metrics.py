@@ -2,6 +2,9 @@ import time
 from typing import Any
 
 from app.database.cache import get_redis_client
+from app.observability.logging import get_logger
+
+logger = get_logger("metrics")
 
 
 def record_tenant_metric(tenant_id: str, is_cache_hit: bool, target_table: str) -> None:
@@ -60,4 +63,5 @@ def get_tenant_metrics(tenant_id: str, plan_limit: int) -> dict[str, Any]:
             },
         }
     except Exception as e:
-        return {"error": f"Failed to calculate real-time usage metrics: {str(e)}"}
+        logger.warning("tenant_metrics_failed", extra={"tenant_id": tenant_id, "error": str(e)})
+        return {"error": "Failed to calculate real-time usage metrics."}
